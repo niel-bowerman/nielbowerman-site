@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contact Me — Niel Bowerman</title>
+<meta name="description" content="Get in touch with Niel Bowerman.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@500&amp;family=Poppins:wght@300;500&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site">
+  <a class="logo" href="index.html">Niel Bowerman</a>
+  <nav class="nav" aria-label="Main">
+    <a href="index.html">Home</a>
+    <a href="bio.html">Biography</a>
+    <a href="writing.html">Writing</a>
+    <a href="talks.html">Talks</a>
+    <a href="travels.html">Travels</a>
+    <a href="contact.html" aria-current="page">Contact Me</a>
+  </nav>
+  <button class="burger" aria-label="Open menu" aria-expanded="false" aria-controls="menu"><span></span><span></span></button>
+</header>
+<div class="menu" id="menu" role="dialog" aria-label="Menu">
+  <button class="close" aria-label="Close menu"></button>
+  <a href="index.html">Home</a>
+    <a href="bio.html">Biography</a>
+    <a href="writing.html">Writing</a>
+    <a href="talks.html">Talks</a>
+    <a href="travels.html">Travels</a>
+    <a href="contact.html">Contact Me</a>
+</div>
+
+<main>
+<section class="hero contact-hero" style="--h:33vh" id="contact-hero">
+  <div class="hero-bg" style="background-image:url(images/contact-bg.jpeg)"></div>
+  <h2>Get in touch</h2>
+</section>
+<section class="sec-contact"><div class="form">
+  <p class="intro">Feel free to fill out the form below to get in touch, or you can reach me at <a href="mailto:niel.bowerman@80000hours.org">niel.bowerman@80000hours.org</a>.</p>
+  <form id="contact-form">
+    <fieldset class="group">
+      <legend>Name <span class="sub">(required)</span></legend>
+      <div class="pair name-pair">
+        <label class="field"><span class="sub">First Name</span><input type="text" name="first" required autocomplete="given-name"></label>
+        <label class="field"><span class="sub">Last Name</span><input type="text" name="last" required autocomplete="family-name"></label>
+      </div>
+    </fieldset>
+    <div class="group"><label class="field"><span class="lbl">Email Address <span class="sub">(required)</span></span><input type="email" name="email" required autocomplete="email"></label></div>
+    <fieldset class="group">
+      <legend>Phone <span class="sub">(optional)</span></legend>
+      <div class="pair phone-pair">
+        <label class="field"><span class="sub">Country</span>
+          <select name="country">
+            <option value="+44">United Kingdom (+44)</option>
+            <option value="+1">United States (+1)</option>
+            <option value="+1">Canada (+1)</option>
+            <option value="+61">Australia (+61)</option>
+            <option value="+353">Ireland (+353)</option>
+            <option value="+49">Germany (+49)</option>
+            <option value="+33">France (+33)</option>
+            <option value="+31">Netherlands (+31)</option>
+            <option value="+91">India (+91)</option>
+          </select></label>
+        <label class="field"><span class="sub">Number</span><input type="tel" name="number" autocomplete="tel-national"></label>
+      </div>
+    </fieldset>
+    <div class="group"><label class="field"><span class="lbl">Subject <span class="sub">(required)</span></span><input type="text" name="subject" required></label></div>
+    <div class="group"><label class="field"><span class="lbl">Message <span class="sub">(required)</span></span><textarea name="message" required></textarea></label></div>
+    <button class="submit" type="submit">Submit</button>
+    <p class="note" id="form-note">Your email app should have opened with the message ready to send. If it didn’t, email <a href="mailto:niel.bowerman@80000hours.org">niel.bowerman@80000hours.org</a> directly.</p>
+  </form>
+</div></section>
+</main>
+
+<footer class="site">
+  <ul>
+    <li><a href="https://www.linkedin.com/in/nielbowerman/" aria-label="LinkedIn"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="images/social.svg#linkedin"/></svg></a></li>
+    <li><a href="https://www.goodreads.com/review/list/35228409-niel-bowerman?shelf=read" aria-label="Goodreads"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="images/social.svg#goodreads"/></svg></a></li>
+    <li><a href="https://twitter.com/NielBowerman" aria-label="Twitter"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="images/social.svg#twitter"/></svg></a></li>
+    <li><a href="https://www.instagram.com/nielbowerman/" aria-label="Instagram"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="images/social.svg#instagram"/></svg></a></li>
+  </ul>
+</footer>
+<script src="script.js"></script>
+</body>
+</html>
