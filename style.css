@@ -184,6 +184,8 @@ header.site {
 .filmed-name { display: block; margin-top: 8px; font: 500 13px/1.35 var(--body); color: #333; }
 .filmed-list button[aria-pressed="true"] .filmed-name { color: var(--link); }
 .filmed-meta { display: block; margin-top: 2px; font-size: 11.5px; line-height: 1.4; color: var(--title); }
+.filmed-link { display: inline-block; margin-top: 2px; font-size: 11.5px; line-height: 1.4; color: var(--link); text-decoration: none; }
+.filmed-link:hover { text-decoration: underline; }
 .globe-tip strong { display: block; font-weight: 500; color: #333; }
 .globe-now { margin: 18px 0 0; min-height: 22px; font-size: 15px; line-height: 22px; color: var(--head); font-variant-numeric: tabular-nums; }
 .globe-bar { position: relative; height: 3px; margin: 14px auto 0; width: 80%; background: #e4e8e9; border-radius: 2px; cursor: pointer; touch-action: none; }
