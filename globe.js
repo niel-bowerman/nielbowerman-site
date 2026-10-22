@@ -8,7 +8,7 @@
   var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   var C = { sea: '#eef2f3', land: '#d6d9da', grid: 'rgba(0,0,0,.04)', rim: '#e2e6e7',
-            arc: 'rgba(49,132,147,.55)', dot: '#318493', halo: 'rgba(49,132,147,.18)' };
+            arc: 'rgba(49,132,147,.4)', pulse: '#4fc3d6', dot: '#318493', halo: 'rgba(49,132,147,.18)' };
 
   var projection = d3.geoOrthographic().clipAngle(90).precision(.3);
   var path = d3.geoPath(projection, ctx);
@@ -27,8 +27,10 @@
       var c = byPlace[trip.place] || (byPlace[trip.place] = { name: trip.place, country: trip.country, lng: trip.lng, lat: trip.lat, days: 0, visits: 0 });
       c.days += days; c.visits++;
       var prev = t[i - 1];
-      if (prev && (prev.lng !== trip.lng || prev.lat !== trip.lat))
-        arcs.push({ type: 'LineString', coordinates: [[prev.lng, prev.lat], [trip.lng, trip.lat]] });
+      if (prev && (prev.lng !== trip.lng || prev.lat !== trip.lat)) {
+        var a = [prev.lng, prev.lat], b = [trip.lng, trip.lat];
+        arcs.push({ type: 'LineString', coordinates: [a, b], lerp: d3.geoInterpolate(a, b), len: d3.geoDistance(a, b), phase: Math.random() });
+      }
     });
     cities = Object.keys(byPlace).map(function (k) { return byPlace[k]; });
     var s = res[1].stats, stats = document.querySelector('.globe-stats');
@@ -51,8 +53,21 @@
 
   function visible(c) { return d3.geoDistance([c.lng, c.lat], [-rot[0], -rot[1]]) < Math.PI / 2; }
 
-  function draw() {
+  // A short bright segment slides along each arc from origin to destination, fading in and out.
+  function pulses(t) {
+    ctx.lineCap = 'round'; ctx.lineWidth = 2; ctx.strokeStyle = C.pulse;
+    arcs.forEach(function (a) {
+      var head = (t / 3200 + a.phase) % 1, tail = Math.max(0, head - Math.min(.35, .12 / a.len)), pts = [];
+      for (var i = 0; i <= 8; i++) pts.push(a.lerp(tail + (head - tail) * i / 8));
+      ctx.globalAlpha = Math.sin(Math.PI * head);
+      ctx.beginPath(); path({ type: 'LineString', coordinates: pts }); ctx.stroke();
+    });
+    ctx.globalAlpha = 1; ctx.lineCap = 'butt';
+  }
+
+  function draw(t) {
     if (!land) return;
+    t = t || 0;
     projection.rotate(rot);
     ctx.clearRect(0, 0, size, size);
     ctx.beginPath(); path(sphere); ctx.fillStyle = C.sea; ctx.fill();
@@ -60,6 +75,7 @@
     ctx.beginPath(); path(land); ctx.fillStyle = C.land; ctx.fill();
     ctx.beginPath(); arcs.forEach(function (a) { path(a); });
     ctx.strokeStyle = C.arc; ctx.lineWidth = 1.2; ctx.stroke();
+    if (!still) pulses(t);
     cities.forEach(function (c) {
       if (!visible(c)) return;
       var p = projection([c.lng, c.lat]), r = radius(c);
@@ -73,7 +89,7 @@
   function loop(now) {
     if (!still && !dragging && !hover && last) rot[0] += (now - last) * .006;
     last = now || 0;
-    draw();
+    draw(last);
     requestAnimationFrame(loop);
   }
 
