@@ -1,8 +1,8 @@
 // Homepage hero: a sun behind the clouds that follows the mouse while it's over the sky, and
 // relights the landscape to match. Drawn with WebGL over the hero video, using two maps made from
-// the still landscape: images/hero-normals.jpg (which way the terrain faces) and images/hero-masks.png
-// (R = sky, G = lochs, B = distance). Clicking the hero changes the weather. Without WebGL, or with
-// reduced motion, the plain video stays.
+// the still landscape: images/hero-masks.png (R = sky, G = lochs, B = distance). The land itself is never
+// shaded: light shows only in the sky and as reflections on the lochs. Clicking the hero changes the
+// weather. Without WebGL, or with reduced motion, the plain video stays.
 (function () {
   var hero = document.querySelector('.hero');
   var video = hero && hero.querySelector('.hero-clip');
@@ -25,7 +25,7 @@
   var fs = [
     'precision highp float;',
     'varying vec2 vUv;',
-    'uniform sampler2D uVideo, uNormals, uMasks;',
+    'uniform sampler2D uVideo, uMasks;',
     'uniform vec2 uScale, uOffset, uSun;',
     'uniform float uAspect, uTime;',
     'uniform vec2 uRes;                                      // canvas size in pixels',
@@ -62,7 +62,6 @@
     'void main(){',
     '  vec2 uv = vUv * uScale + uOffset;',
     '  vec3 col = texture2D(uVideo, uv).rgb;',
-    '  vec3 n = normalize(texture2D(uNormals, uv).rgb * 2.0 - 1.0);',
     '  vec3 m = texture2D(uMasks, uv).rgb;',
     '  float sky = m.r, water = m.g, dist = m.b;',
     '  vec3 sunCol = vec3(1.0, 0.92, 0.78);',
@@ -83,22 +82,19 @@
     '  vec2 toward = -normalize(d + 1e-5) * 0.007 / vec2(uAspect, 1.0);',
     '  float lining = clamp((luma(texture2D(uVideo, uv + toward).rgb) - lum) * 16.0, 0.0, 1.0) * halo;',
     '  float glow = (core * 1.25 * trans + halo * 0.40 * pow(trans, 0.7) + wide * 0.10 + lining * 0.30) * vis;',
-    '  vec3 L = normalize(vec3(-d * 0.9, mix(0.55, 0.22, uGolden)));   // golden hour: low sun, long shadows',
-    '  float shade = 1.0 + 0.75 * dot(n.xy, L.xy) * vis;     // brighter facing the sun, darker away; no net change',
     '  float land = 1.0 - sky;',
     // clear day: open up blue sky behind the thinner cloud, keep the bright clouds as clouds
     '  vec3 blue = mix(vec3(0.36, 0.56, 0.86), vec3(0.72, 0.82, 0.93), clamp(uv.y / 0.32, 0.0, 1.0));',
     '  float cloud = smoothstep(0.62, 0.86, lum);',
     '  col = mix(col, mix(blue, col * 1.08, cloud), uClear * sky);',
-    '  vec3 lit = col * mix(1.0, shade, land);',
-    // warm light falling on the distant land nearest the sun, and a glint on the lochs below it
-    '  lit += sunCol * exp(-r / 0.40) * (0.05 + 0.10 * dist) * land * vis;',
+    '  vec3 lit = col;                                       // (no shading on the land)',
+    // the sun's reflection: a glint on the lochs below it
     '  float under = exp(-pow((uv.x - uSun.x) * uAspect / 0.10, 2.0));',
     '  float ripple = 0.75 + 0.25 * sin(uTime * 2.3 + uv.x * 140.0 + uv.y * 60.0);',
     '  lit += sunCol * water * under * ripple * 0.30 * vis;',
-    // the glow sits behind/in the sky, with a whisper of lens bloom over everything
+    // the glow sits behind/in the sky
     '  lit = 1.0 - (1.0 - lit) * (1.0 - sunCol * glow * smoothstep(0.45, 1.0, sky));   // (soft rim on ridges, not a hard line)',
-    '  lit += sunCol * wide * 0.035 * vis;',
+    '  lit += sunCol * wide * 0.035 * vis * sky;               // a whisper of bloom, in the sky only',
     // --- weather
     '  float g = luma(lit);',
     // clear: a touch brighter and more saturated; golden: warm cast, warmest low in the sky
@@ -117,7 +113,7 @@
     // snow: settles on the brighter, open ground (not the dark crevices or the lochs); cold, pale sky
     '  float patches = vnoise(uv * vec2(70.0, 45.0)) * 0.6 + vnoise(uv * vec2(260.0, 170.0)) * 0.4;',
     '  float cover = land * (1.0 - water) * smoothstep(0.30, 0.62, lum + 0.38 * (patches - 0.5)) * (0.55 + 0.45 * dist);',
-    '  lit = mix(lit, vec3(0.88, 0.91, 0.96) * (0.70 + 0.55 * lum) * (0.85 + 0.2 * shade), cover * 0.85 * uSnow);   // keeps texture',
+    '  lit = mix(lit, vec3(0.88, 0.91, 0.96) * (0.70 + 0.55 * lum), cover * 0.85 * uSnow);   // keeps texture',
     '  lit = mix(lit, vec3(0.80, 0.82, 0.86), 0.45 * uSnow * sky) * mix(vec3(1.0), vec3(0.94, 0.97, 1.04), uSnow);',
     '  float flakes = snowLayer(s, uTime, 14.0, 0.09, 4.5) + snowLayer(s + 5.3, uTime, 24.0, 0.06, 3.2) + snowLayer(s + 11.7, uTime, 40.0, 0.04, 2.2);',
     '  lit = mix(lit, vec3(0.97, 0.98, 1.0), clamp(flakes, 0.0, 1.0) * 0.85 * uSnow);',
@@ -161,7 +157,7 @@
     gl.uniform1i(gl.getUniformLocation(prog, name), unit);
     return t;
   }
-  var tVideo = texture(0, 'uVideo'), tNormals = texture(1, 'uNormals'), tMasks = texture(2, 'uMasks');
+  var tVideo = texture(0, 'uVideo'), tMasks = texture(1, 'uMasks');
   var u = {};
   ['uScale', 'uOffset', 'uSun', 'uAspect', 'uTime', 'uRes', 'uFlash'].forEach(function (k) { u[k] = gl.getUniformLocation(prog, k); });
 
@@ -199,7 +195,7 @@
   function load(src, tex, keepSky) {
     var img = new Image();
     img.onload = function () {
-      gl.activeTexture(gl.TEXTURE0 + (tex === tNormals ? 1 : 2));
+      gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
       if (keepSky) {
@@ -211,7 +207,6 @@
     };
     img.src = src;
   }
-  load('images/hero-normals.jpg', tNormals, false);
   load('images/hero-masks.png', tMasks, true);
 
   // object-fit: cover, done by hand: which part of the video the canvas shows
@@ -264,7 +259,7 @@
   function frame(now) {
     requestAnimationFrame(frame);
     var dt = Math.min(0.25, (now - last) / 1000); last = now;   // easing by time, not frames
-    if (!visible || loaded < 2 || video.readyState < 2) return;
+    if (!visible || loaded < 1 || video.readyState < 2) return;
     var ks = 1 - Math.exp(-dt / 0.28), kw = 1 - Math.exp(-dt / 0.75);
     sun[0] += (target[0] - sun[0]) * ks;                              // the sun eases after the mouse
     sun[1] += (target[1] - sun[1]) * ks;
