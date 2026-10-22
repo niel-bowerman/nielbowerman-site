@@ -225,11 +225,7 @@ header.site {
 }
 .stage-head { width: 760px; max-width: calc(100% - 12vw); margin: 0 auto; text-align: center; }
 .stage-kicker { margin: 0; font: 500 12px/1 var(--body); letter-spacing: .18em; text-transform: uppercase; color: var(--glow); }
-.stage-stats { display: flex; justify-content: center; gap: 56px; margin: 22px 0 0; }
-.stage-stats div { display: flex; flex-direction: column-reverse; align-items: center; }
-.stage-stats dd { margin: 0; font: 500 52px/1 var(--display); letter-spacing: -.03em; color: #fff; font-variant-numeric: tabular-nums; }
-.stage-stats dt { margin-top: 8px; font-size: 13px; letter-spacing: .06em; color: var(--mute); }
-.travel-stage .globe-fig { width: 700px; margin-top: 40px; }
+.travel-stage .globe-fig { width: 700px; margin-top: 20px; }
 .travel-stage .globe-now { color: var(--ink); }
 .travel-stage .globe-bar { background: rgba(255,255,255,.16); }
 .travel-stage .globe-bar-fill { background: var(--glow); }
@@ -328,10 +324,7 @@ footer.site a:hover svg { fill: #999; }
   .travel-intro { padding: 40px 0 48px; }
   .travel-intro .lede { font-size: 17px; }
   .travel-stage { padding: 56px 0 64px; }
-  .stage-stats { gap: 22px; }
-  .stage-stats dd { font-size: 34px; }
-  .stage-stats dt { font-size: 11.5px; }
-  .travel-stage .globe-fig { margin-top: 28px; }
+        .travel-stage .globe-fig { margin-top: 28px; }
   .travel-stage .filmed { margin-top: 48px; }
   .filmed { margin-top: 48px; max-width: none; width: auto; }
   .filmed .w-label { margin: 0 6vw; }
