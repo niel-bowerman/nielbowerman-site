@@ -56,7 +56,10 @@ header.site {
   display: flex; align-items: center; justify-content: center;
   padding: var(--header-h) 0 0; color: var(--bg); background: #444;
 }
-/* inner pages: one banner style — photo and title */
+/* inner pages: a plain centred title (Travels keeps a photo/video banner) */
+.page-head { padding: calc(var(--header-h) + 56px) 0 8px; }
+.page-head h1 { width: 841px; max-width: 88%; margin: 0 auto; }
+/* banner (Travels) */
 .page-hero { height: 46vh; min-height: 340px; max-height: 520px; }
 .page-hero::after { background: linear-gradient(rgba(0,0,0,.18), rgba(0,0,0,.32)); }
 .page-hero-text { position: relative; z-index: 2; width: 841px; max-width: 88%; text-align: center; color: var(--bg); }
@@ -236,6 +239,7 @@ footer.site a:hover svg { fill: #999; }
   .sec-text { padding: 40px 0; }
   .page-hero { min-height: 300px; padding-top: var(--header-h); }
   .writing, .bio { padding-top: 40px; }
+  .page-head { padding-top: calc(var(--header-h) + 32px); }
   .grid { width: calc(100% - 12vw); }
   .bio-text, .bio-img { grid-column: 1 / -1; padding: 0; }
   .bio-img { margin-top: 24px; max-width: 70%; }
