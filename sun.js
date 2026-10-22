@@ -1,10 +1,11 @@
 // Homepage hero: a sun behind the clouds that follows the mouse while it's over the sky, and
-// relights the landscape to match. Drawn with WebGL over the hero video, using two maps made from
-// the still landscape: images/hero-masks.png (R = sky, G = lochs, B = distance) and images/hero-snow.png
-// (where snow can settle). (Not packed into the masks' alpha: browsers drop the colour of fully transparent
-// pixels, which erased the sky.) The land itself is never
-// shaded: light shows only in the sky and as reflections on the lochs. Clicking the hero changes the
-// weather. Without WebGL, or with reduced motion, the plain video stays.
+// relights the landscape to match. Drawn with WebGL over the hero video, using maps made from the
+// still landscape: images/hero-masks.png (R = sky, G = lochs, B = distance), images/hero-snow.png
+// (where snow can settle) and images/hero-walk.png (the sky behind the walker, to keep him in front
+// of it). (The snow map isn't packed into the masks' alpha: browsers drop the colour of fully
+// transparent pixels, which erased the sky.) The land itself is never shaded: light shows only in the
+// sky and as reflections on the lochs. Clicking the hero changes the weather. Without WebGL, or with
+// reduced motion, the plain video stays.
 (function () {
   var hero = document.querySelector('.hero');
   var video = hero && hero.querySelector('.hero-clip');
@@ -27,7 +28,7 @@
   var fs = [
     'precision highp float;',
     'varying vec2 vUv;',
-    'uniform sampler2D uVideo, uMasks, uSnowHold;',
+    'uniform sampler2D uVideo, uMasks, uSnowHold, uWalk;',
     'uniform vec2 uScale, uOffset, uSun;',
     'uniform float uAspect, uTime;',
     'uniform vec2 uRes;                                      // canvas size in pixels',
@@ -77,6 +78,20 @@
     '  vec3 m = texture2D(uMasks, uv).rgb;',
     '  float hold = texture2D(uSnowHold, uv).r;              // can this spot hold snow?',
     '  float sky = m.r, water = m.g, dist = m.b;',
+    // the walker: where he steps up against the sky, keep him in front of it. Found by comparing the frame
+    // with a still of that patch of sky (images/hero-walk.png: x 720-832, y 170-250 of the 1280x720 clip)
+    '  vec2 wq = (uv - vec2(0.5625, 0.2361)) / vec2(0.0875, 0.1111);',
+    '  if (wq.x > 0.0 && wq.x < 1.0 && wq.y > 0.0 && wq.y < 1.0 && sky > 0.0) {',
+    '    float dw = 0.0;',
+    '    for (int k = 0; k < 5; k++) {                         // a pixel either side, so his outline is covered',
+    '      vec2 o = k == 0 ? vec2(0.0) : vec2(k == 1 ? 1.0 : k == 2 ? -1.0 : 0.0, k == 3 ? 1.0 : k == 4 ? -1.0 : 0.0);',
+    '      vec3 e = abs(texture2D(uVideo, uv + o / vec2(1280.0, 720.0)).rgb - texture2D(uWalk, wq + o / vec2(112.0, 80.0)).rgb);',
+    '      dw = max(dw, max(e.r, max(e.g, e.b)));',
+    '    }',
+    '    float walker = smoothstep(0.11, 0.20, dw);',
+    '    sky *= 1.0 - walker;',
+    '    dist = mix(dist, 0.15, walker);',
+    '  }',
     '  vec3 sunCol = vec3(1.0, 0.92, 0.78);',
     '  vec2 d = (uv - uSun) * vec2(uAspect, 1.0);          // offset from the sun, in frame heights',
     '  float r = length(d);',
@@ -98,10 +113,17 @@
     '  float land = 1.0 - sky;',
     // clear day: open up blue sky behind the thinner cloud, keep the bright clouds as clouds
     '  vec3 blue = mix(vec3(0.20, 0.40, 0.74), vec3(0.55, 0.70, 0.88), pow(clamp(uv.y / 0.32, 0.0, 1.0), 1.5));',
-    '  float cloud = smoothstep(0.66, 0.90, lum);',
-    '  vec3 cloudCol = mix(col * 0.85, min(col * 1.22, vec3(1.0)), smoothstep(0.75, 0.92, lum));   // white tops, grey bases',
-    '  col = mix(col, mix(blue, cloudCol, cloud), uClear * sky);',
-    '  col = mix(col, vec3(0.20, 0.33, 0.52) + 0.25 * (col - 0.6), uClear * water * 0.75);   // lochs reflect the blue',
+    '  vec3 sc = col;                                         // on a ridge edge, judge the sky by its nearest pure-sky pixel',
+    '  if (sky > 0.02 && sky < 0.9) {',
+    '    for (int k = 0; k < 8; k++) {',
+    '      vec2 o = vec2(cos(float(k) * 0.785398), sin(float(k) * 0.785398)) * vec2(2.5 / 1280.0, 2.5 / 720.0);',
+    '      if (texture2D(uMasks, uv + o).r > 0.9) { sc = texture2D(uVideo, uv + o).rgb; break; }',
+    '    }',
+    '  }',
+    '  float cloud = smoothstep(0.66, 0.90, luma(sc));',
+    '  vec3 cloudCol = mix(sc * 0.85, min(sc * 1.22, vec3(1.0)), smoothstep(0.75, 0.92, luma(sc)));   // white tops, grey bases',
+    '  col = mix(col, mix(blue, cloudCol, cloud), uClear * smoothstep(0.0, 0.55, sky));   // right up to the ridge, so no rim',
+    '  col = mix(col, mix(vec3(0.20, 0.33, 0.52), vec3(0.52, 0.64, 0.80), smoothstep(0.75, 1.0, dist)) + 0.25 * (col - 0.6), uClear * water * 0.75);   // lochs reflect the blue (paler far off)',
     '  vec3 lit = col;                                       // (no shading on the land)',
     // the sun's reflection: a glint on the lochs below it
     '  float under = exp(-pow((uv.x - uSun.x) * uAspect / 0.10, 2.0));',
@@ -115,6 +137,9 @@
     // clear: a touch brighter and more saturated; golden: warm cast, warmest low in the sky
     '  lit = mix(vec3(g), lit, 1.0 + 0.10 * uClear);',
     '  lit = mix(lit, ((lit - 0.42) * (1.0 + 0.28 * land * (0.4 + dist)) + 0.40) * mix(vec3(1.0), vec3(0.94, 0.98, 0.93), land), uClear);   // crisper, less hazy, deeper greens',
+    '  lit = mix(lit, vec3(0.66, 0.75, 0.86), uClear * land * smoothstep(0.80, 1.0, dist) * 0.30);   // the far hills fade blue',
+    '  float farMtn = step(0.7234, uv.x) * step(uv.x, 0.8672) * step(uv.y, 0.3472) * smoothstep(0.88, 0.94, dist) * smoothstep(0.0, 0.35, land);',   // (fully tinted early, so its misty edge has no pale rim)
+    '  lit = mix(lit, vec3(0.50, 0.57, 0.68) + (lum - 0.70) * 2.5, uClear * farMtn * 0.85);   // the misty mountain between the peaks: a distant blue hill',
     '  float hz = smoothstep(0.04, 0.31, uv.y);                 // 1 near the horizon, 0 overhead',
     '  lit *= mix(vec3(1.0), mix(vec3(0.80, 0.66, 0.52), vec3(1.10, 0.94, 0.78), sky), uGolden);   // land: dimmer, warm',
     '  lit = mix(lit, lit * vec3(0.72, 0.74, 0.92), uGolden * sky * (1.0 - hz));           // cooler sky overhead',
@@ -200,7 +225,7 @@
     gl.uniform1i(gl.getUniformLocation(prog, name), unit);
     return t;
   }
-  var tVideo = texture(0, 'uVideo'), tMasks = texture(1, 'uMasks'), tSnow = texture(2, 'uSnowHold');
+  var tVideo = texture(0, 'uVideo'), tMasks = texture(1, 'uMasks'), tSnow = texture(2, 'uSnowHold'), tWalk = texture(3, 'uWalk');
   gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
   gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);   // masks are data, not a picture
   var u = {};
@@ -245,10 +270,10 @@
   // the sky mask, kept small on the side, to know whether the mouse is over the sky
   var skyData = null, SKY_W = 160, SKY_H = 90;
   var loaded = 0;
-  function load(src, tex, keepSky) {
+  function load(src, unit, tex, keepSky) {
     var img = new Image();
     img.onload = function () {
-      gl.activeTexture(tex === tMasks ? gl.TEXTURE1 : gl.TEXTURE2);
+      gl.activeTexture(gl.TEXTURE0 + unit);
       gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
       if (keepSky) {
@@ -260,8 +285,9 @@
     };
     img.src = src;
   }
-  load('images/hero-masks.png?v=202610221608', tMasks, true);
-  load('images/hero-snow.png?v=202610221608', tSnow, false);
+  load('images/hero-masks.png?v=202610221704', 1, tMasks, true);
+  load('images/hero-snow.png?v=202610221608', 2, tSnow, false);
+  load('images/hero-walk.png?v=202610221704', 3, tWalk, false);
 
   // object-fit: cover, done by hand: which part of the video the canvas shows
   var scale = [1, 1], offset = [0, 0];
@@ -301,6 +327,7 @@
     };
     window.holdFlash = function (v, x, seed, yEnd, land) { heldFlash = v; if (x !== undefined) bolt = [x, seed || 1, yEnd || 0.30, land || 0]; };
     window.getWeather = function () { return { weather: weather, mix: JSON.parse(JSON.stringify(mix)) }; };
+    window.drawNow = function () { frame(performance.now()); };   // for a throttled (background) test tab
   }
 
   var visible = true;
@@ -313,7 +340,7 @@
   function frame(now) {
     requestAnimationFrame(frame);
     var dt = Math.min(0.25, (now - last) / 1000); last = now;   // easing by time, not frames
-    if (!visible || loaded < 2 || video.readyState < 2) return;
+    if (!visible || loaded < 3 || video.readyState < 2) return;
     var ks = 1 - Math.exp(-dt / 0.28), kw = 1 - Math.exp(-dt / 0.75);
     sun[0] += (target[0] - sun[0]) * ks;                              // the sun eases after the mouse
     sun[1] += (target[1] - sun[1]) * ks;
