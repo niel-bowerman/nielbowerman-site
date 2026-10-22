@@ -14,14 +14,14 @@
   var ctx = canvas.getContext('2d');
   var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // Two looks: the flat grey map, or (?globe=photo) NASA Blue Marble imagery wrapped onto the sphere.
-  var photo = /[?&]globe=photo\b/.test(location.search) || wrap.getAttribute('data-style') === 'photo';
-  var C = photo
-    ? { rim: 'rgba(150,200,255,.35)', arc: 'rgba(255,255,255,.45)', trail: 'rgba(255,255,255,.9)', pulse: '#ffe3a3',
-        dot: '#ffb547', halo: 'rgba(255,181,71,.25)', ring: '255,181,71' }
-    : { sea: '#eef2f3', land: '#d6d9da', grid: 'rgba(0,0,0,.04)', rim: '#e2e6e7',
-        arc: 'rgba(49,132,147,.4)', trail: 'rgba(49,132,147,.85)', pulse: '#4fc3d6',
-        dot: '#318493', halo: 'rgba(49,132,147,.18)', ring: '49,132,147' };
+  // Two looks: NASA Blue Marble imagery wrapped onto the sphere (the default), or the flat grey map
+  // (?globe=flat, or if the imagery fails to load).
+  var photo = !/[?&]globe=flat\b/.test(location.search);
+  var PHOTO = { rim: 'rgba(150,200,255,.35)', arc: 'rgba(255,255,255,.45)', trail: 'rgba(255,255,255,.9)', pulse: '#ffe3a3',
+                dot: '#ffb547', halo: 'rgba(255,181,71,.25)', ring: '255,181,71' };
+  var C = { sea: '#eef2f3', land: '#d6d9da', grid: 'rgba(0,0,0,.04)', rim: '#e2e6e7',
+            arc: 'rgba(49,132,147,.4)', trail: 'rgba(49,132,147,.85)', pulse: '#4fc3d6',
+            dot: '#318493', halo: 'rgba(49,132,147,.18)', ring: '49,132,147' };
   var tex, texW, texH, tile = document.createElement('canvas'), tileCtx = tile.getContext('2d');
 
   var projection = d3.geoOrthographic().clipAngle(90).precision(.3);
@@ -41,7 +41,7 @@
       var img = new Image();
       img.onload = function () { ok(img); }; img.onerror = fail;
       img.src = 'images/earth.jpg?v=202610222030';
-    }) : null
+    }).catch(function () { return null; }) : null
   ]).then(function (res) {
     land = topojson.feature(res[0], res[0].objects.land);
     if (res[2]) {
@@ -49,7 +49,7 @@
       c.width = texW = res[2].width; c.height = texH = res[2].height;
       c.getContext('2d').drawImage(res[2], 0, 0);
       tex = c.getContext('2d').getImageData(0, 0, texW, texH).data;
-      fig.classList.add('photo');
+      C = PHOTO;
     }
     trips = res[1].trips;
     build();
