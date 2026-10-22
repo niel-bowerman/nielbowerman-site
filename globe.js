@@ -14,9 +14,15 @@
   var ctx = canvas.getContext('2d');
   var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  var C = { sea: '#eef2f3', land: '#d6d9da', grid: 'rgba(0,0,0,.04)', rim: '#e2e6e7',
-            arc: 'rgba(49,132,147,.4)', trail: 'rgba(49,132,147,.85)', pulse: '#4fc3d6',
-            dot: '#318493', halo: 'rgba(49,132,147,.18)' };
+  // Two looks: the flat grey map, or (?globe=photo) NASA Blue Marble imagery wrapped onto the sphere.
+  var photo = /[?&]globe=photo\b/.test(location.search) || wrap.getAttribute('data-style') === 'photo';
+  var C = photo
+    ? { rim: 'rgba(150,200,255,.35)', arc: 'rgba(255,255,255,.45)', trail: 'rgba(255,255,255,.9)', pulse: '#ffe3a3',
+        dot: '#ffb547', halo: 'rgba(255,181,71,.25)', ring: '255,181,71' }
+    : { sea: '#eef2f3', land: '#d6d9da', grid: 'rgba(0,0,0,.04)', rim: '#e2e6e7',
+        arc: 'rgba(49,132,147,.4)', trail: 'rgba(49,132,147,.85)', pulse: '#4fc3d6',
+        dot: '#318493', halo: 'rgba(49,132,147,.18)', ring: '49,132,147' };
+  var tex, texW, texH, tile = document.createElement('canvas'), tileCtx = tile.getContext('2d');
 
   var projection = d3.geoOrthographic().clipAngle(90).precision(.3);
   var path = d3.geoPath(projection, ctx);
@@ -30,9 +36,21 @@
 
   Promise.all([
     fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/land-110m.json').then(function (r) { return r.json(); }),
-    fetch('travels.json?v=202610221800').then(function (r) { return r.json(); })
+    fetch('travels.json?v=202610221800').then(function (r) { return r.json(); }),
+    photo ? new Promise(function (ok, fail) {
+      var img = new Image();
+      img.onload = function () { ok(img); }; img.onerror = fail;
+      img.src = 'images/earth.jpg?v=202610222030';
+    }) : null
   ]).then(function (res) {
     land = topojson.feature(res[0], res[0].objects.land);
+    if (res[2]) {
+      var c = document.createElement('canvas');
+      c.width = texW = res[2].width; c.height = texH = res[2].height;
+      c.getContext('2d').drawImage(res[2], 0, 0);
+      tex = c.getContext('2d').getImageData(0, 0, texW, texH).data;
+      fig.classList.add('photo');
+    }
     trips = res[1].trips;
     build();
     var s = res[1].stats, stats = fig.querySelector('.globe-stats');
@@ -155,9 +173,12 @@
     projection.rotate(rot);
     rotate = d3.geoRotation(rot);
     ctx.clearRect(0, 0, size, size);
-    ctx.beginPath(); path(sphere); ctx.fillStyle = C.sea; ctx.fill();
-    ctx.beginPath(); path(graticule); ctx.strokeStyle = C.grid; ctx.lineWidth = 1; ctx.stroke();
-    ctx.beginPath(); path(land); ctx.fillStyle = C.land; ctx.fill();
+    if (tex) earth();
+    else {
+      ctx.beginPath(); path(sphere); ctx.fillStyle = C.sea; ctx.fill();
+      ctx.beginPath(); path(graticule); ctx.strokeStyle = C.grid; ctx.lineWidth = 1; ctx.stroke();
+      ctx.beginPath(); path(land); ctx.fillStyle = C.land; ctx.fill();
+    }
 
     // Routes: all of them at rest; during the replay, the ones flown so far plus the one in progress.
     var cur = null;
@@ -188,12 +209,46 @@
     ctx.beginPath(); path(sphere); ctx.strokeStyle = C.rim; ctx.lineWidth = 1; ctx.stroke();
   }
 
+  // Photo look: for each pixel of the disc, find the point on the sphere under it, undo the globe's
+  // rotation and sample the Blue Marble image there, darkening towards the edge for a little depth.
+  // The rotation is undone as a 3×3 matrix whose columns come from d3's own inverse rotation.
+  function vec(ll) {
+    var l = ll[0] * RAD, f = ll[1] * RAD;
+    return [Math.cos(f) * Math.sin(l), Math.sin(f), Math.cos(f) * Math.cos(l)];
+  }
+  function earth() {
+    var R = projection.scale(), t = projection.translate(), dpr = window.devicePixelRatio || 1;
+    var N = Math.min(640, Math.round(2 * R * dpr));
+    if (tile.width !== N) { tile.width = tile.height = N; tile.img = tileCtx.createImageData(N, N); }
+    var out = tile.img.data, inv = rotate.invert;
+    var cx = vec(inv([90, 0])), cy = vec(inv([0, 90])), cz = vec(inv([0, 0]));
+    for (var j = 0, o = 0; j < N; j++) {
+      var y = 1 - (j + .5) * 2 / N;
+      for (var i = 0; i < N; i++, o += 4) {
+        var x = (i + .5) * 2 / N - 1, d = x * x + y * y;
+        if (d >= 1) { out[o + 3] = 0; continue; }
+        var z = Math.sqrt(1 - d);
+        var ux = x * cx[0] + y * cy[0] + z * cz[0], uy = x * cx[1] + y * cy[1] + z * cz[1], uz = x * cx[2] + y * cy[2] + z * cz[2];
+        var tx = ((Math.atan2(ux, uz) / Math.PI + 1) / 2 * texW) | 0, ty = ((.5 - Math.asin(Math.max(-1, Math.min(1, uy))) / Math.PI) * texH) | 0;
+        var k = ((ty < texH ? ty : texH - 1) * texW + (tx < texW ? tx : texW - 1)) * 4, shade = .55 + .45 * z;
+        out[o] = tex[k] * shade; out[o + 1] = tex[k + 1] * shade; out[o + 2] = tex[k + 2] * shade;
+        out[o + 3] = d > .985 ? 255 * (1 - d) / .015 : 255;
+      }
+    }
+    tileCtx.putImageData(tile.img, 0, 0);
+    // a soft atmosphere just outside the edge
+    var g = ctx.createRadialGradient(t[0], t[1], R * .98, t[0], t[1], R * 1.08);
+    g.addColorStop(0, 'rgba(120,180,255,.35)'); g.addColorStop(1, 'rgba(120,180,255,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(t[0], t[1], R * 1.08, 0, 2 * Math.PI); ctx.fill();
+    ctx.drawImage(tile, t[0] - R, t[1] - R, 2 * R, 2 * R);
+  }
+
   function traveller(t) {
     var pos = position(pt), q = screen(pos, pos.arc ? lift(pos.arc, pos.f) : 1);
     if (!q.show) return;
     var ring = (t % 1200) / 1200;
     ctx.beginPath(); ctx.arc(q.x, q.y, 5 + ring * 12, 0, 2 * Math.PI);
-    ctx.strokeStyle = 'rgba(49,132,147,' + (.5 * (1 - ring)) + ')'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.strokeStyle = 'rgba(' + C.ring + ',' + (.5 * (1 - ring)) + ')'; ctx.lineWidth = 1.5; ctx.stroke();
     ctx.beginPath(); ctx.arc(q.x, q.y, 5, 0, 2 * Math.PI); ctx.fillStyle = '#fff'; ctx.fill();
     ctx.lineWidth = 2.5; ctx.strokeStyle = C.dot; ctx.stroke();
   }
