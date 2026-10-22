@@ -24,7 +24,10 @@
   // Two looks: NASA Blue Marble imagery wrapped onto the sphere (the default), or the flat grey map
   // (?globe=flat, or if the imagery fails to load).
   var photo = !/[?&]globe=flat\b/.test(location.search);
+  // Over the photo globe routes are white; where they rise past its edge into the (light) page they
+  // turn the site's teal so they still show.
   var PHOTO = { rim: 'rgba(150,200,255,.35)', arc: 'rgba(255,255,255,.45)', trail: 'rgba(255,255,255,.9)', pulse: '#ffe3a3',
+                skyArc: 'rgba(49,132,147,.55)', skyTrail: 'rgba(49,132,147,.95)', skyPulse: '#318493',
                 dot: '#ffb547', halo: 'rgba(255,181,71,.25)', ring: '255,181,71' };
   var C = { sea: '#eef2f3', land: '#d6d9da', grid: 'rgba(0,0,0,.04)', rim: '#e2e6e7',
             arc: 'rgba(49,132,147,.4)', trail: 'rgba(49,132,147,.85)', pulse: '#4fc3d6',
@@ -129,13 +132,16 @@
   function screen(ll, r) {
     var p = rotate(ll), l = p[0] * RAD, f = p[1] * RAD, s = projection.scale(), t = projection.translate();
     var x = Math.cos(f) * Math.sin(l), y = Math.sin(f), z = Math.cos(f) * Math.cos(l);
-    return { x: t[0] + s * r * x, y: t[1] - s * r * y, show: z > 0 || r * r * (x * x + y * y) > 1 };
+    var sky = r * r * (x * x + y * y) > 1;
+    return { x: t[0] + s * r * x, y: t[1] - s * r * y, show: z > 0 || sky, sky: sky };
   }
-  function trace(a, f0, f1) {
+  // Add an arc's visible stretch from f0 to f1 to the current path; with `sky` true or false, only the
+  // part beyond the globe's edge, or only the part over the globe.
+  function trace(a, f0, f1, sky) {
     var n = Math.max(3, Math.ceil(48 * (f1 - f0) * (.3 + a.len))), pen = false;
     for (var i = 0; i <= n; i++) {
       var f = f0 + (f1 - f0) * i / n, q = screen(a.lerp(f), lift(a, f));
-      if (!q.show) { pen = false; continue; }
+      if (!q.show || (sky !== undefined && q.sky !== sky)) { pen = false; continue; }
       if (pen) ctx.lineTo(q.x, q.y); else ctx.moveTo(q.x, q.y);
       pen = true;
     }
@@ -165,11 +171,12 @@
 
   // A short bright segment slides along each arc from origin to destination, fading in and out.
   function pulses(t) {
-    ctx.lineCap = 'round'; ctx.lineWidth = 2; ctx.strokeStyle = C.pulse;
+    ctx.lineCap = 'round'; ctx.lineWidth = 2;
     arcs.forEach(function (a) {
       var head = (t / 3200 + a.phase) % 1, tail = Math.max(0, head - Math.min(.35, .12 / a.len));
       ctx.globalAlpha = Math.sin(Math.PI * head);
-      ctx.beginPath(); trace(a, tail, head); ctx.stroke();
+      ctx.strokeStyle = C.pulse; ctx.beginPath(); trace(a, tail, head, false); ctx.stroke();
+      ctx.strokeStyle = C.skyPulse || C.pulse; ctx.beginPath(); trace(a, tail, head, true); ctx.stroke();
     });
     ctx.globalAlpha = 1; ctx.lineCap = 'butt';
   }
@@ -188,17 +195,18 @@
     }
 
     // Routes: all of them at rest; during the replay, the ones flown so far plus the one in progress.
-    var cur = null;
-    ctx.beginPath();
-    arcs.forEach(function (a) {
-      if (full || a.t1 <= pt) trace(a, 0, 1);
-      else if (a.t0 < pt) cur = a;
+    var cur = null, done = arcs.filter(function (a) {
+      if (!full && a.t1 > pt && a.t0 < pt) cur = a;
+      return full || a.t1 <= pt;
     });
-    ctx.strokeStyle = C.arc; ctx.lineWidth = 1.2; ctx.stroke();
-    if (cur) {
-      ctx.beginPath(); trace(cur, 0, d3.easeCubicInOut((pt - cur.t0) / (cur.t1 - cur.t0)));
-      ctx.strokeStyle = C.trail; ctx.lineWidth = 1.8; ctx.stroke();
-    }
+    [false, true].forEach(function (sky) {
+      ctx.beginPath(); done.forEach(function (a) { trace(a, 0, 1, sky); });
+      ctx.strokeStyle = sky ? C.skyArc || C.arc : C.arc; ctx.lineWidth = 1.2; ctx.stroke();
+      if (cur) {
+        ctx.beginPath(); trace(cur, 0, d3.easeCubicInOut((pt - cur.t0) / (cur.t1 - cur.t0)), sky);
+        ctx.strokeStyle = sky ? C.skyTrail || C.trail : C.trail; ctx.lineWidth = 1.8; ctx.stroke();
+      }
+    });
     if (full && !still) pulses(t);
 
     // Cities appear as the traveller reaches them and grow with each stay.

@@ -200,7 +200,7 @@ header.site {
 .globe-replay:hover { text-decoration: underline; }
 .globe-fig figcaption { margin-top: 34px; font-size: 13px; line-height: 1.6; color: var(--title); }
 .globe-fig figcaption a { color: inherit; }
-/* travels: intro, then a night-sky stage for the globe, its numbers and the filming spots */
+/* travels: intro, then a pale band for the globe and the filming spots */
 .travel-intro { padding: 64px 0 72px; }
 .travel-intro .lede { font-size: 19px; line-height: 1.65; color: #333; }
 .travel-actions { display: flex; flex-wrap: wrap; gap: 6px 28px; margin-top: 24px; font-size: 15px; }
@@ -211,35 +211,26 @@ header.site {
 .player button { position: absolute; top: 18px; right: 22px; width: 40px; height: 40px; border: 0; border-radius: 50%; background: rgba(255,255,255,.12); color: #fff; font-size: 22px; line-height: 40px; cursor: pointer; }
 .player button:hover { background: rgba(255,255,255,.22); }
 .travel-stage {
-  --ink: rgba(235, 242, 247, .92); --mute: rgba(200, 215, 225, .6); --glow: #6fd3e3;
-  position: relative; padding: 88px 0 96px; color: var(--ink); overflow: hidden;
-  background:
-    radial-gradient(1px 1px at 12% 22%, rgba(255,255,255,.55), transparent 60%),
-    radial-gradient(1px 1px at 78% 12%, rgba(255,255,255,.45), transparent 60%),
-    radial-gradient(1.5px 1.5px at 88% 46%, rgba(255,255,255,.35), transparent 60%),
-    radial-gradient(1px 1px at 22% 68%, rgba(255,255,255,.4), transparent 60%),
-    radial-gradient(1px 1px at 64% 84%, rgba(255,255,255,.35), transparent 60%),
-    radial-gradient(1.5px 1.5px at 40% 8%, rgba(255,255,255,.3), transparent 60%),
-    radial-gradient(1px 1px at 6% 90%, rgba(255,255,255,.35), transparent 60%),
-    radial-gradient(ellipse 70% 55% at 50% 42%, #14304a 0%, #0b1b2c 55%, #070f1a 100%);
+  --ink: #333; --mute: var(--title); --glow: var(--link);
+  position: relative; padding: 80px 0 88px; color: var(--ink); background: #eef2f3;
 }
 .stage-head { width: 760px; max-width: calc(100% - 12vw); margin: 0 auto; text-align: center; }
 .stage-kicker { margin: 0; font: 500 12px/1 var(--body); letter-spacing: .18em; text-transform: uppercase; color: var(--glow); }
 .travel-stage .globe-fig { width: 700px; margin-top: 20px; }
 .travel-stage .globe-now { color: var(--ink); }
-.travel-stage .globe-bar { background: rgba(255,255,255,.16); }
+.travel-stage .globe-bar { background: #dbe2e4; }
 .travel-stage .globe-bar-fill { background: var(--glow); }
-.travel-stage .globe-bar-fill::after { border-color: var(--glow); background: #0b1b2c; }
+.travel-stage .globe-bar-fill::after { border-color: var(--glow); background: #fff; }
 .travel-stage .globe-tick { color: var(--mute); }
-.travel-stage .globe-tick::before { background: rgba(255,255,255,.25); }
+.travel-stage .globe-tick::before { background: #cfd4d6; }
 .travel-stage .globe-fig figcaption, .travel-stage .globe-fig figcaption a { color: var(--mute); }
 .travel-stage .globe-replay { color: var(--glow); }
 .travel-stage .filmed { margin-top: 72px; }
-.travel-stage .w-label { color: var(--mute); border-bottom-color: rgba(255,255,255,.12); }
-.travel-stage .filmed-thumb { background: #12263a; }
-.travel-stage .filmed-list button:hover .filmed-thumb, .travel-stage .filmed-list button:focus-visible .filmed-thumb { box-shadow: 0 0 0 2px rgba(255,255,255,.35); }
+.travel-stage .w-label { color: var(--head); border-bottom-color: #dde3e5; }
+.travel-stage .filmed-thumb { background: #dde3e5; }
+.travel-stage .filmed-list button:hover .filmed-thumb, .travel-stage .filmed-list button:focus-visible .filmed-thumb { box-shadow: 0 0 0 2px #cfd8da; }
 .travel-stage .filmed-list button[aria-pressed="true"] .filmed-thumb { box-shadow: 0 0 0 2px var(--glow); }
-.travel-stage .filmed-name { color: #fff; }
+.travel-stage .filmed-name { color: #333; }
 .travel-stage .filmed-list button[aria-pressed="true"] .filmed-name { color: var(--glow); }
 .travel-stage .filmed-meta { color: var(--mute); }
 .travel-stage .filmed-link { color: var(--glow); }
