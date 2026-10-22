@@ -238,6 +238,7 @@ footer.site a:hover svg { fill: #999; }
   .hero-bg { background-attachment: scroll; }
   .sec-text { padding: 40px 0; }
   .page-hero { min-height: 300px; padding-top: var(--header-h); }
+  .page-hero .hero-img, .page-hero .hero-clip { top: var(--header-h); height: calc(100% - var(--header-h)); }   /* the phone header is opaque */
   .writing, .bio { padding-top: 40px; }
   .page-head { padding-top: calc(var(--header-h) + 32px); }
   .grid { width: calc(100% - 12vw); }
