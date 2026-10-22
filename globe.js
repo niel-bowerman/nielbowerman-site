@@ -55,7 +55,7 @@
       var prev = trips[i - 1];
       if (prev && (prev.lng !== trip.lng || prev.lat !== trip.lat)) {
         var a = [prev.lng, prev.lat], b = [trip.lng, trip.lat], len = d3.geoDistance(a, b);
-        var arc = { type: 'LineString', coordinates: [a, b], lerp: d3.geoInterpolate(a, b), len: len, phase: Math.random(),
+        var arc = { lerp: d3.geoInterpolate(a, b), len: len, alt: .02 + .09 * len, phase: Math.random(),
                     t0: T, t1: T + 260 + 200 * len / Math.PI };
         arcs.push(arc); legs.push({ fly: arc, trip: trip, t0: arc.t0, t1: arc.t1 }); T = arc.t1;
       }
@@ -84,11 +84,36 @@
     return legs[legs.length - 1];
   }
 
-  // Where the traveller is at replay time t.
+  // Where the traveller is at replay time t: [lng, lat], plus how far along the current flight (or -1).
   function position(t) {
     var leg = legAt(t);
-    if (leg.fly) return leg.fly.lerp(d3.easeCubicInOut(Math.max(0, Math.min(1, (t - leg.t0) / (leg.t1 - leg.t0)))));
+    if (leg.fly) {
+      var f = d3.easeCubicInOut(Math.max(0, Math.min(1, (t - leg.t0) / (leg.t1 - leg.t0))));
+      var p = leg.fly.lerp(f);
+      p.arc = leg.fly; p.f = f;
+      return p;
+    }
     return [leg.stay.lng, leg.stay.lat];
+  }
+
+  // Flights arc up off the surface, higher the longer they are. d3's orthographic projection only
+  // draws the surface, so lifted points are projected by hand: rotate, scale the unit vector by the
+  // altitude, and hide a point only when the globe is in front of it.
+  var RAD = Math.PI / 180, rotate = d3.geoRotation(rot);
+  function lift(a, f) { return 1 + a.alt * Math.sin(Math.PI * f); }
+  function screen(ll, r) {
+    var p = rotate(ll), l = p[0] * RAD, f = p[1] * RAD, s = projection.scale(), t = projection.translate();
+    var x = Math.cos(f) * Math.sin(l), y = Math.sin(f), z = Math.cos(f) * Math.cos(l);
+    return { x: t[0] + s * r * x, y: t[1] - s * r * y, show: z > 0 || r * r * (x * x + y * y) > 1 };
+  }
+  function trace(a, f0, f1) {
+    var n = Math.max(3, Math.ceil(48 * (f1 - f0) * (.3 + a.len))), pen = false;
+    for (var i = 0; i <= n; i++) {
+      var f = f0 + (f1 - f0) * i / n, q = screen(a.lerp(f), lift(a, f));
+      if (!q.show) { pen = false; continue; }
+      if (pen) ctx.lineTo(q.x, q.y); else ctx.moveTo(q.x, q.y);
+      pen = true;
+    }
   }
 
   function resize() {
@@ -97,7 +122,7 @@
     canvas.width = canvas.height = size * dpr;
     canvas.style.width = canvas.style.height = size + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    projection.scale(size / 2 - 2).translate([size / 2, size / 2]);
+    projection.scale(size / 2 / 1.18 - 2).translate([size / 2, size / 2]);   // room for the arcs to rise
     draw(0);
   }
 
@@ -108,7 +133,7 @@
   // Ease the camera towards the traveller (k = 1 jumps straight there).
   function follow(k) {
     var p = position(pt);
-    var d = ((-p[0] - rot[0]) % 360 + 540) % 360 - 180;
+    var d = ((-p[0] - rot[0]) % 360 + 540) % 360 - 180;   // shortest way round
     rot[0] += d * k;
     rot[1] += (-Math.max(-50, Math.min(55, p[1])) * .85 - rot[1]) * k;
   }
@@ -117,24 +142,18 @@
   function pulses(t) {
     ctx.lineCap = 'round'; ctx.lineWidth = 2; ctx.strokeStyle = C.pulse;
     arcs.forEach(function (a) {
-      var head = (t / 3200 + a.phase) % 1, tail = Math.max(0, head - Math.min(.35, .12 / a.len)), pts = [];
-      for (var i = 0; i <= 8; i++) pts.push(a.lerp(tail + (head - tail) * i / 8));
+      var head = (t / 3200 + a.phase) % 1, tail = Math.max(0, head - Math.min(.35, .12 / a.len));
       ctx.globalAlpha = Math.sin(Math.PI * head);
-      ctx.beginPath(); path({ type: 'LineString', coordinates: pts }); ctx.stroke();
+      ctx.beginPath(); trace(a, tail, head); ctx.stroke();
     });
     ctx.globalAlpha = 1; ctx.lineCap = 'butt';
-  }
-
-  function partial(a, f) {
-    var pts = [], n = Math.max(2, Math.ceil(24 * f));
-    for (var i = 0; i <= n; i++) pts.push(a.lerp(f * i / n));
-    return { type: 'LineString', coordinates: pts };
   }
 
   function draw(t) {
     if (!land) return;
     var full = mode === 'done';
     projection.rotate(rot);
+    rotate = d3.geoRotation(rot);
     ctx.clearRect(0, 0, size, size);
     ctx.beginPath(); path(sphere); ctx.fillStyle = C.sea; ctx.fill();
     ctx.beginPath(); path(graticule); ctx.strokeStyle = C.grid; ctx.lineWidth = 1; ctx.stroke();
@@ -144,12 +163,12 @@
     var cur = null;
     ctx.beginPath();
     arcs.forEach(function (a) {
-      if (full || a.t1 <= pt) path(a);
+      if (full || a.t1 <= pt) trace(a, 0, 1);
       else if (a.t0 < pt) cur = a;
     });
     ctx.strokeStyle = C.arc; ctx.lineWidth = 1.2; ctx.stroke();
     if (cur) {
-      ctx.beginPath(); path(partial(cur, d3.easeCubicInOut((pt - cur.t0) / (cur.t1 - cur.t0))));
+      ctx.beginPath(); trace(cur, 0, d3.easeCubicInOut((pt - cur.t0) / (cur.t1 - cur.t0)));
       ctx.strokeStyle = C.trail; ctx.lineWidth = 1.8; ctx.stroke();
     }
     if (full && !still) pulses(t);
@@ -170,12 +189,12 @@
   }
 
   function traveller(t) {
-    var pos = position(pt);
-    if (d3.geoDistance(pos, [-rot[0], -rot[1]]) > Math.PI / 2) return;
-    var p = projection(pos), ring = (t % 1200) / 1200;
-    ctx.beginPath(); ctx.arc(p[0], p[1], 5 + ring * 12, 0, 2 * Math.PI);
+    var pos = position(pt), q = screen(pos, pos.arc ? lift(pos.arc, pos.f) : 1);
+    if (!q.show) return;
+    var ring = (t % 1200) / 1200;
+    ctx.beginPath(); ctx.arc(q.x, q.y, 5 + ring * 12, 0, 2 * Math.PI);
     ctx.strokeStyle = 'rgba(49,132,147,' + (.5 * (1 - ring)) + ')'; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.beginPath(); ctx.arc(p[0], p[1], 5, 0, 2 * Math.PI); ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.beginPath(); ctx.arc(q.x, q.y, 5, 0, 2 * Math.PI); ctx.fillStyle = '#fff'; ctx.fill();
     ctx.lineWidth = 2.5; ctx.strokeStyle = C.dot; ctx.stroke();
   }
 
