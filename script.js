@@ -69,6 +69,40 @@
     play(v);
   });
 
+  // Links with data-player open their video in a pop-up player instead of navigating; Escape,
+  // the close button or a click outside the video closes it. Without JavaScript the link just
+  // opens the file.
+  document.querySelectorAll('a[data-player]').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      var box = document.createElement('div');
+      box.className = 'player';
+      box.setAttribute('role', 'dialog');
+      box.setAttribute('aria-modal', 'true');
+      box.setAttribute('aria-label', a.getAttribute('data-title') || a.textContent);
+      var v = document.createElement('video');
+      v.src = a.getAttribute('href');
+      v.poster = a.getAttribute('data-poster') || '';
+      v.controls = true; v.autoplay = true; v.playsInline = true;
+      var x = document.createElement('button');
+      x.type = 'button'; x.setAttribute('aria-label', 'Close video'); x.textContent = '×';
+      box.appendChild(v); box.appendChild(x);
+      document.body.appendChild(box);
+      requestAnimationFrame(function () { box.classList.add('on'); });
+      var close = function () {
+        v.pause();
+        document.removeEventListener('keydown', key);
+        box.classList.remove('on');
+        setTimeout(function () { box.remove(); a.focus(); }, 250);
+      };
+      var key = function (ev) { if (ev.key === 'Escape') close(); };
+      x.addEventListener('click', close);
+      box.addEventListener('click', function (ev) { if (ev.target === box) close(); });
+      document.addEventListener('keydown', key);
+      x.focus();
+    });
+  });
+
   // Contact form: opens the visitor's email app with the message filled in.
   var form = document.getElementById('contact-form');
   if (form) {
