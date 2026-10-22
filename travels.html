@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500&amp;family=Poppins:wght@300;500&amp;display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=202610221800">
+<link rel="stylesheet" href="style.css?v=202610221930">
 </head>
 <body>
 <header class="site">
@@ -34,9 +34,12 @@
 </div>
 
 <main>
-<section class="hero has-title-offset" style="--h:47.1vh">
+<section class="hero page-hero">
   <div class="hero-bg" style="background-image:url(images/travels-bg.jpeg)"></div>
-  <h1>Travels</h1>
+  <div class="page-hero-text">
+    <h1>Travels</h1>
+    <p>Two years as digital nomads, and the photos along the way.</p>
+  </div>
 </section>
 <section class="sec-text sec-travel"><div class="narrow">
   <p>My wife Lily and I are now settled in London, but in 2019 and 2020 we were <a href="https://en.wikipedia.org/wiki/Digital_nomad">digital nomads</a> travelling the world while we waited for a UK visa for Lily.&nbsp; Our adventures during that time are captured in <a href="https://drive.google.com/file/d/1aysXN50JNO8rW7skzayU9JlvWUQd6RAm/view?usp=sharing">this 2-min video montage</a> and charted below courtesy of <a href="https://nomadlist.com/">NomadList</a>.&nbsp;</p>
@@ -48,7 +51,9 @@
     <div class="globe-tip" aria-hidden="true"></div>
     <img class="globe-fallback" src="images/travels-map.jpg" alt="Map of our 2019–2020 travels, courtesy of NomadList" loading="lazy">
   </div>
-  <figcaption><span class="globe-stats"></span><span class="globe-hint">Drag to spin · data from <a href="https://nomads.com/@nielbowerman">NomadList</a></span></figcaption>
+  <p class="globe-now" aria-hidden="true"></p>
+  <div class="globe-bar" role="slider" tabindex="0" aria-label="Journey timeline" aria-valuemin="0" aria-valuemax="100"><div class="globe-bar-fill"></div></div>
+  <figcaption><span class="globe-stats"></span><span class="globe-hint">Drag to spin · data from <a href="https://nomads.com/@nielbowerman">NomadList</a></span><button class="globe-replay" type="button">↻ Replay the journey</button></figcaption>
 </figure>
 </section>
 </main>
@@ -64,6 +69,6 @@
 <script src="script.js?v=202610221608"></script>
 <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
-<script src="globe.js?v=202610221830"></script>
+<script src="globe.js?v=202610221900"></script>
 </body>
 </html>

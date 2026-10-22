@@ -1,43 +1,95 @@
-// Travels globe: NomadList trips (snapshot in travels.json) on a spinning d3 orthographic globe.
+// Travels globe: NomadList trips (snapshot in travels.json) on a d3 orthographic globe.
+// When it scrolls into view it replays the journey trip by trip, in compressed time, with the
+// camera following the traveller; then it rests as a slowly spinning map of every route.
 (function () {
   var wrap = document.querySelector('.globe');
   if (!wrap || !window.d3 || !window.topojson) return;
+  var fig = wrap.closest('.globe-fig');
   var canvas = wrap.querySelector('canvas');
   var tip = wrap.querySelector('.globe-tip');
+  var now = fig.querySelector('.globe-now');
+  var bar = fig.querySelector('.globe-bar');
+  var fill = fig.querySelector('.globe-bar-fill');
+  var replayBtn = fig.querySelector('.globe-replay');
   var ctx = canvas.getContext('2d');
   var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   var C = { sea: '#eef2f3', land: '#d6d9da', grid: 'rgba(0,0,0,.04)', rim: '#e2e6e7',
-            arc: 'rgba(49,132,147,.4)', pulse: '#4fc3d6', dot: '#318493', halo: 'rgba(49,132,147,.18)' };
+            arc: 'rgba(49,132,147,.4)', trail: 'rgba(49,132,147,.85)', pulse: '#4fc3d6',
+            dot: '#318493', halo: 'rgba(49,132,147,.18)' };
 
   var projection = d3.geoOrthographic().clipAngle(90).precision(.3);
   var path = d3.geoPath(projection, ctx);
   var graticule = d3.geoGraticule10();
   var sphere = { type: 'Sphere' };
-  var land, arcs = [], cities = [], size = 0, rot = [10, -25], hover = null;
+  var land, trips, arcs = [], legs = [], cities = [], size = 0, rot = [118, -28], hover = null;
+  // mode: 'idle' (waiting to be seen) → 'play' (replaying) → 'done' (full map, spinning)
+  var mode = still ? 'done' : 'idle', T = 0, pt = 0, scrubbing = false, dragging = false;
+
+  var month = function (s) { return new Date(s).toLocaleString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' }); };
 
   Promise.all([
     fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/land-110m.json').then(function (r) { return r.json(); }),
     fetch('travels.json?v=202610221800').then(function (r) { return r.json(); })
   ]).then(function (res) {
     land = topojson.feature(res[0], res[0].objects.land);
-    var t = res[1].trips, byPlace = {};
-    t.forEach(function (trip, i) {
+    trips = res[1].trips;
+    build();
+    var s = res[1].stats, stats = fig.querySelector('.globe-stats');
+    if (stats) stats.textContent = s.cities + ' cities · ' + s.countries + ' countries · ' + s.distance_traveled_km.toLocaleString('en-GB') + ' km';
+    if (mode === 'done') finish(); else { pt = 0; follow(1); }
+    wrap.classList.add('ready');
+    resize(); requestAnimationFrame(loop);
+    watch();
+  }).catch(function () { fig.classList.add('failed'); });
+
+  // Lay the trips out on a compressed timeline: every flight takes about a third of a second
+  // (a little longer for long ones) and every stay a beat that grows only with the log of its length.
+  function build() {
+    var byPlace = {};
+    trips.forEach(function (trip, i) {
       var days = Math.max(1, (new Date(trip.end) - new Date(trip.start)) / 864e5);
-      var c = byPlace[trip.place] || (byPlace[trip.place] = { name: trip.place, country: trip.country, lng: trip.lng, lat: trip.lat, days: 0, visits: 0 });
-      c.days += days; c.visits++;
-      var prev = t[i - 1];
+      var c = byPlace[trip.place] || (byPlace[trip.place] = { name: trip.place, country: trip.country, lng: trip.lng, lat: trip.lat, days: 0, arrive: Infinity });
+      c.days += days;
+      trip.city = c; trip.days = days;
+      var prev = trips[i - 1];
       if (prev && (prev.lng !== trip.lng || prev.lat !== trip.lat)) {
-        var a = [prev.lng, prev.lat], b = [trip.lng, trip.lat];
-        arcs.push({ type: 'LineString', coordinates: [a, b], lerp: d3.geoInterpolate(a, b), len: d3.geoDistance(a, b), phase: Math.random() });
+        var a = [prev.lng, prev.lat], b = [trip.lng, trip.lat], len = d3.geoDistance(a, b);
+        var arc = { type: 'LineString', coordinates: [a, b], lerp: d3.geoInterpolate(a, b), len: len, phase: Math.random(),
+                    t0: T, t1: T + 260 + 200 * len / Math.PI };
+        arcs.push(arc); legs.push({ fly: arc, trip: trip, t0: arc.t0, t1: arc.t1 }); T = arc.t1;
       }
+      trip.t0 = T;
+      c.arrive = Math.min(c.arrive, T);
+      T += Math.min(520, 70 + 55 * Math.log2(1 + days));
+      legs.push({ stay: trip, trip: trip, t0: trip.t0, t1: T });
     });
     cities = Object.keys(byPlace).map(function (k) { return byPlace[k]; });
-    var s = res[1].stats, stats = document.querySelector('.globe-stats');
-    if (stats) stats.textContent = s.cities + ' cities · ' + s.countries + ' countries · ' + s.distance_traveled_km.toLocaleString('en-GB') + ' km';
-    wrap.classList.add('ready');
-    resize(); loop();
-  }).catch(function () { wrap.classList.add('failed'); });
+
+    // Year ticks on the timeline bar, at the point in the replay where each year starts.
+    var seen = {};
+    trips.forEach(function (trip) {
+      var y = trip.start.slice(0, 4);
+      if (seen[y]) return;
+      seen[y] = 1;
+      var tick = document.createElement('span');
+      tick.className = 'globe-tick'; tick.textContent = y;
+      tick.style.left = (100 * trip.t0 / T) + '%';
+      bar.appendChild(tick);
+    });
+  }
+
+  function legAt(t) {
+    for (var i = 0; i < legs.length; i++) if (t < legs[i].t1) return legs[i];
+    return legs[legs.length - 1];
+  }
+
+  // Where the traveller is at replay time t.
+  function position(t) {
+    var leg = legAt(t);
+    if (leg.fly) return leg.fly.lerp(d3.easeCubicInOut(Math.max(0, Math.min(1, (t - leg.t0) / (leg.t1 - leg.t0)))));
+    return [leg.stay.lng, leg.stay.lat];
+  }
 
   function resize() {
     var dpr = window.devicePixelRatio || 1;
@@ -46,12 +98,20 @@
     canvas.style.width = canvas.style.height = size + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     projection.scale(size / 2 - 2).translate([size / 2, size / 2]);
-    draw();
+    draw(0);
   }
 
-  function radius(c) { return 2 + Math.sqrt(c.days) * .35; }
+  function radius(c, days) { return 2 + Math.sqrt(days) * .35; }
 
   function visible(c) { return d3.geoDistance([c.lng, c.lat], [-rot[0], -rot[1]]) < Math.PI / 2; }
+
+  // Ease the camera towards the traveller (k = 1 jumps straight there).
+  function follow(k) {
+    var p = position(pt);
+    var d = ((-p[0] - rot[0]) % 360 + 540) % 360 - 180;
+    rot[0] += d * k;
+    rot[1] += (-Math.max(-50, Math.min(55, p[1])) * .85 - rot[1]) * k;
+  }
 
   // A short bright segment slides along each arc from origin to destination, fading in and out.
   function pulses(t) {
@@ -65,33 +125,130 @@
     ctx.globalAlpha = 1; ctx.lineCap = 'butt';
   }
 
+  function partial(a, f) {
+    var pts = [], n = Math.max(2, Math.ceil(24 * f));
+    for (var i = 0; i <= n; i++) pts.push(a.lerp(f * i / n));
+    return { type: 'LineString', coordinates: pts };
+  }
+
   function draw(t) {
     if (!land) return;
-    t = t || 0;
+    var full = mode === 'done';
     projection.rotate(rot);
     ctx.clearRect(0, 0, size, size);
     ctx.beginPath(); path(sphere); ctx.fillStyle = C.sea; ctx.fill();
     ctx.beginPath(); path(graticule); ctx.strokeStyle = C.grid; ctx.lineWidth = 1; ctx.stroke();
     ctx.beginPath(); path(land); ctx.fillStyle = C.land; ctx.fill();
-    ctx.beginPath(); arcs.forEach(function (a) { path(a); });
+
+    // Routes: all of them at rest; during the replay, the ones flown so far plus the one in progress.
+    var cur = null;
+    ctx.beginPath();
+    arcs.forEach(function (a) {
+      if (full || a.t1 <= pt) path(a);
+      else if (a.t0 < pt) cur = a;
+    });
     ctx.strokeStyle = C.arc; ctx.lineWidth = 1.2; ctx.stroke();
-    if (!still) pulses(t);
+    if (cur) {
+      ctx.beginPath(); path(partial(cur, d3.easeCubicInOut((pt - cur.t0) / (cur.t1 - cur.t0))));
+      ctx.strokeStyle = C.trail; ctx.lineWidth = 1.8; ctx.stroke();
+    }
+    if (full && !still) pulses(t);
+
+    // Cities appear as the traveller reaches them and grow with each stay.
+    var daysSoFar = {};
+    trips.forEach(function (trip) { if (full || trip.t0 <= pt) daysSoFar[trip.place] = (daysSoFar[trip.place] || 0) + trip.days; });
     cities.forEach(function (c) {
-      if (!visible(c)) return;
-      var p = projection([c.lng, c.lat]), r = radius(c);
+      if (!daysSoFar[c.name] || !visible(c)) return;
+      var p = projection([c.lng, c.lat]), r = radius(c, daysSoFar[c.name]);
+      if (!full) r *= d3.easeBackOut(Math.min(1, (pt - c.arrive) / 300));
       ctx.beginPath(); ctx.arc(p[0], p[1], r + 3, 0, 2 * Math.PI); ctx.fillStyle = C.halo; ctx.fill();
       ctx.beginPath(); ctx.arc(p[0], p[1], c === hover ? r + 1.5 : r, 0, 2 * Math.PI); ctx.fillStyle = C.dot; ctx.fill();
     });
+
+    if (!full) traveller(t);
     ctx.beginPath(); path(sphere); ctx.strokeStyle = C.rim; ctx.lineWidth = 1; ctx.stroke();
   }
 
-  var dragging = false, last = 0;
-  function loop(now) {
-    if (!still && !dragging && !hover && last) rot[0] += (now - last) * .006;
-    last = now || 0;
-    draw(last);
+  function traveller(t) {
+    var pos = position(pt);
+    if (d3.geoDistance(pos, [-rot[0], -rot[1]]) > Math.PI / 2) return;
+    var p = projection(pos), ring = (t % 1200) / 1200;
+    ctx.beginPath(); ctx.arc(p[0], p[1], 5 + ring * 12, 0, 2 * Math.PI);
+    ctx.strokeStyle = 'rgba(49,132,147,' + (.5 * (1 - ring)) + ')'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(p[0], p[1], 5, 0, 2 * Math.PI); ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.lineWidth = 2.5; ctx.strokeStyle = C.dot; ctx.stroke();
+  }
+
+  function label() {
+    var text, leg = legAt(pt);
+    if (mode === 'done') text = month(trips[0].start) + ' – ' + month(trips[trips.length - 1].start);
+    else if (mode === 'idle') text = '';
+    else text = (leg.fly ? '→ ' : '') + month(leg.trip.start) + ' · ' + leg.trip.place + ', ' + leg.trip.country;
+    if (now.textContent !== text) now.textContent = text;
+    fill.style.width = (100 * pt / T) + '%';
+    bar.setAttribute('aria-valuenow', Math.round(100 * pt / T));
+  }
+
+  function finish() {
+    mode = 'done'; pt = T;
+    fig.classList.add('done');
+    label();
+  }
+
+  function play(from) {
+    mode = 'play'; pt = from;
+    fig.classList.remove('done');
+  }
+
+  var last = 0;
+  function loop(t) {
+    var dt = last ? Math.min(50, t - last) : 0;
+    last = t;
+    if (mode === 'play') {
+      if (!scrubbing) pt += dt;
+      if (pt >= T) finish();
+      else if (!dragging) follow(1 - Math.exp(-dt / 280));
+    } else if (mode === 'done' && !still && !dragging && !hover) {
+      rot[0] += dt * .006;
+    }
+    if (mode !== 'idle') label();
+    draw(t);
     requestAnimationFrame(loop);
   }
+
+  // Start the replay the first time the globe is mostly on screen.
+  function watch() {
+    if (mode !== 'idle') return;
+    if (!('IntersectionObserver' in window)) return play(0);
+    var io = new IntersectionObserver(function (es) {
+      if (es[0].isIntersecting) { io.disconnect(); play(0); }
+    }, { threshold: .5 });
+    io.observe(wrap);
+  }
+
+  replayBtn.addEventListener('click', function () { play(0); follow(1); });
+
+  // Timeline bar: drag to scrub; the replay carries on from wherever you let go.
+  function scrubTo(e) {
+    var b = bar.getBoundingClientRect();
+    pt = Math.max(0, Math.min(T - 1, (e.clientX - b.left) / b.width * T));
+  }
+  bar.addEventListener('pointerdown', function (e) {
+    if (!T) return;
+    scrubbing = true; bar.setPointerCapture(e.pointerId);
+    if (mode !== 'play') play(0);
+    scrubTo(e); follow(1);
+  });
+  bar.addEventListener('pointermove', function (e) { if (scrubbing) { scrubTo(e); follow(.35); } });
+  bar.addEventListener('pointerup', function () { scrubbing = false; });
+  bar.addEventListener('pointercancel', function () { scrubbing = false; });
+  bar.addEventListener('keydown', function (e) {
+    var step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+    if (!step || !T) return;
+    e.preventDefault();
+    var i = Math.max(0, Math.min(trips.length - 1, trips.indexOf(legAt(mode === 'done' ? T - 1 : pt).trip) + step));
+    play(trips[i].t0); follow(1);
+  });
 
   d3.select(canvas).call(d3.drag()
     .on('start', function () { dragging = true; wrap.classList.add('grabbing'); hide(); })
@@ -103,12 +260,12 @@
     .on('end', function () { dragging = false; wrap.classList.remove('grabbing'); }));
 
   canvas.addEventListener('pointermove', function (e) {
-    if (dragging) return;
+    if (dragging || mode !== 'done') return;
     var b = canvas.getBoundingClientRect(), x = e.clientX - b.left, y = e.clientY - b.top, best = null, bd = 12;
     cities.forEach(function (c) {
       if (!visible(c)) return;
       var p = projection([c.lng, c.lat]), d = Math.hypot(p[0] - x, p[1] - y);
-      if (d < Math.max(bd, radius(c) + 4)) { best = c; bd = d; }
+      if (d < Math.max(bd, radius(c, c.days) + 4)) { best = c; bd = d; }
     });
     hover = best;
     if (!best) return hide();
