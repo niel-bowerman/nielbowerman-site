@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500&amp;family=Poppins:wght@300;500&amp;display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=202610230600">
+<link rel="stylesheet" href="style.css?v=202610230700">
 </head>
 <body>
 <header class="site">
@@ -41,11 +41,25 @@
     <h1>Travels</h1>
   </div>
 </section>
-<section class="sec-text sec-travel"><div class="narrow">
-  <p>My wife Lily and I are now settled in London, but in 2019 and 2020 we were <a href="https://en.wikipedia.org/wiki/Digital_nomad">digital nomads</a> travelling the world while we waited for a UK visa for Lily.&nbsp; Our adventures during that time are captured in <a href="https://drive.google.com/file/d/1aysXN50JNO8rW7skzayU9JlvWUQd6RAm/view?usp=sharing">this 2-min video montage</a> and charted below courtesy of <a href="https://nomadlist.com/">NomadList</a>.&nbsp;</p>
-  <p>We published <a href="https://thebolditalic.com/photo-essay-san-francisco-during-coronavirus-89d6fbb45a5b">a photo essay on San Francisco</a> while we were ‘sheltering in place’ there during coronavirus.&nbsp; More of my photos and videos are available on <a href="https://www.instagram.com/nielbowerman/">Instagram</a>.</p>
-</div>
-<figure class="globe-fig">
+<section class="travel-intro"><div class="narrow">
+  <p class="lede">In 2019 and 2020 my wife Lily and I were <a href="https://en.wikipedia.org/wiki/Digital_nomad">digital nomads</a>, travelling the world while we waited for Lily’s UK visa. We’re settled in London now.</p>
+  <p>Along the way we sheltered in place in San Francisco through the first months of coronavirus and published a photo essay about it. More of my photos and videos are on <a href="https://www.instagram.com/nielbowerman/">Instagram</a>.</p>
+  <p class="travel-actions">
+    <a class="pill" href="https://drive.google.com/file/d/1aysXN50JNO8rW7skzayU9JlvWUQd6RAm/view?usp=sharing">▶&nbsp; Watch the 2-minute montage</a>
+    <a class="pill pill-quiet" href="https://thebolditalic.com/photo-essay-san-francisco-during-coronavirus-89d6fbb45a5b">San Francisco photo essay →</a>
+  </p>
+</div></section>
+
+<section class="travel-stage" aria-labelledby="route">
+  <div class="stage-head">
+    <p class="stage-kicker" id="route">The route · 2018–2020</p>
+    <dl class="stage-stats">
+      <div><dt>cities</dt><dd data-count="35">35</dd></div>
+      <div><dt>countries</dt><dd data-count="17">17</dd></div>
+      <div><dt>km travelled</dt><dd data-count="183456">183,456</dd></div>
+    </dl>
+  </div>
+  <figure class="globe-fig">
   <div class="globe">
     <canvas role="img" aria-label="Spinning globe of our 2018–2020 travels, from NomadList"></canvas>
     <div class="globe-tip" aria-hidden="true"></div>
@@ -54,9 +68,9 @@
   </div>
   <p class="globe-now" aria-hidden="true"></p>
   <div class="globe-bar" role="slider" tabindex="0" aria-label="Journey timeline" aria-valuemin="0" aria-valuemax="100"><div class="globe-bar-fill"></div></div>
-  <figcaption><span class="globe-stats"></span><span class="globe-hint">Drag to spin · data from <a href="https://nomads.com/@nielbowerman">NomadList</a></span><button class="globe-replay" type="button">↻ Replay the journey</button></figcaption>
+  <figcaption><span class="globe-hint">Drag to spin · data from <a href="https://nomads.com/@nielbowerman">NomadList</a></span><button class="globe-replay" type="button">↻ Replay the journey</button></figcaption>
 </figure>
-<div class="filmed">
+  <div class="filmed">
   <h2 class="w-label">Where the videos on this site were filmed</h2>
   <ul class="filmed-list">
     <li><button type="button" aria-pressed="false" data-lng="-6.272" data-lat="57.627" data-place="The Quiraing, Isle of Skye" data-when="Oct 2020">
@@ -105,6 +119,6 @@
 <script src="script.js?v=202610230000"></script>
 <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
-<script src="globe.js?v=202610230500"></script>
+<script src="globe.js?v=202610230700"></script>
 </body>
 </html>

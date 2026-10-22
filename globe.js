@@ -423,5 +423,22 @@
     s.el.addEventListener('mouseleave', function () { v.pause(); s.el.classList.remove('playing'); });
   });
 
+  // The route's numbers count up the first time they come into view.
+  var counters = document.querySelectorAll('.stage-stats [data-count]');
+  if (counters.length && !still && 'IntersectionObserver' in window) {
+    counters.forEach(function (el) { el.textContent = '0'; });
+    var co = new IntersectionObserver(function (es) {
+      if (!es[0].isIntersecting) return;
+      co.disconnect();
+      var t0 = performance.now();
+      (function tick(now) {
+        var k = Math.min(1, (now - t0) / 1600), e = 1 - Math.pow(1 - k, 3);
+        counters.forEach(function (el) { el.textContent = Math.round(+el.getAttribute('data-count') * e).toLocaleString('en-GB'); });
+        if (k < 1) requestAnimationFrame(tick);
+      })(t0);
+    }, { threshold: .6 });
+    co.observe(counters[0].closest('.stage-stats'));
+  }
+
   window.addEventListener('resize', resize);
 })();

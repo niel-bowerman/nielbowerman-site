@@ -199,9 +199,52 @@ header.site {
 .globe-fig.done .globe-replay { visibility: visible; }
 .globe-replay:hover { text-decoration: underline; }
 .globe-fig figcaption { margin-top: 34px; font-size: 13px; line-height: 1.6; color: var(--title); }
-.globe-stats { display: block; font-size: 14px; letter-spacing: .04em; color: var(--head); }
 .globe-fig figcaption a { color: inherit; }
-.sec-travel { padding-bottom: 64px; }
+/* travels: intro, then a night-sky stage for the globe, its numbers and the filming spots */
+.travel-intro { padding: 64px 0 72px; }
+.travel-intro .lede { font-size: 19px; line-height: 1.65; color: #333; }
+.travel-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+.pill { display: inline-block; padding: 10px 18px; border-radius: 999px; background: var(--link); color: #fff; text-decoration: none; font: 500 14px/1.2 var(--body); transition: background .15s; }
+.pill:hover { background: #276d7a; text-decoration: none; }
+.pill-quiet { background: transparent; color: var(--link); box-shadow: inset 0 0 0 1.5px rgba(49,132,147,.45); }
+.pill-quiet:hover { background: rgba(49,132,147,.08); }
+.travel-stage {
+  --ink: rgba(235, 242, 247, .92); --mute: rgba(200, 215, 225, .6); --glow: #6fd3e3;
+  position: relative; padding: 88px 0 96px; color: var(--ink); overflow: hidden;
+  background:
+    radial-gradient(1px 1px at 12% 22%, rgba(255,255,255,.55), transparent 60%),
+    radial-gradient(1px 1px at 78% 12%, rgba(255,255,255,.45), transparent 60%),
+    radial-gradient(1.5px 1.5px at 88% 46%, rgba(255,255,255,.35), transparent 60%),
+    radial-gradient(1px 1px at 22% 68%, rgba(255,255,255,.4), transparent 60%),
+    radial-gradient(1px 1px at 64% 84%, rgba(255,255,255,.35), transparent 60%),
+    radial-gradient(1.5px 1.5px at 40% 8%, rgba(255,255,255,.3), transparent 60%),
+    radial-gradient(1px 1px at 6% 90%, rgba(255,255,255,.35), transparent 60%),
+    radial-gradient(ellipse 70% 55% at 50% 42%, #14304a 0%, #0b1b2c 55%, #070f1a 100%);
+}
+.stage-head { width: 760px; max-width: calc(100% - 12vw); margin: 0 auto; text-align: center; }
+.stage-kicker { margin: 0; font: 500 12px/1 var(--body); letter-spacing: .18em; text-transform: uppercase; color: var(--glow); }
+.stage-stats { display: flex; justify-content: center; gap: 56px; margin: 22px 0 0; }
+.stage-stats div { display: flex; flex-direction: column-reverse; align-items: center; }
+.stage-stats dd { margin: 0; font: 500 52px/1 var(--display); letter-spacing: -.03em; color: #fff; font-variant-numeric: tabular-nums; }
+.stage-stats dt { margin-top: 8px; font-size: 13px; letter-spacing: .06em; color: var(--mute); }
+.travel-stage .globe-fig { width: 700px; margin-top: 40px; }
+.travel-stage .globe-now { color: var(--ink); }
+.travel-stage .globe-bar { background: rgba(255,255,255,.16); }
+.travel-stage .globe-bar-fill { background: var(--glow); }
+.travel-stage .globe-bar-fill::after { border-color: var(--glow); background: #0b1b2c; }
+.travel-stage .globe-tick { color: var(--mute); }
+.travel-stage .globe-tick::before { background: rgba(255,255,255,.25); }
+.travel-stage .globe-fig figcaption, .travel-stage .globe-fig figcaption a { color: var(--mute); }
+.travel-stage .globe-replay { color: var(--glow); }
+.travel-stage .filmed { margin-top: 72px; }
+.travel-stage .w-label { color: var(--mute); border-bottom-color: rgba(255,255,255,.12); }
+.travel-stage .filmed-thumb { background: #12263a; }
+.travel-stage .filmed-list button:hover .filmed-thumb, .travel-stage .filmed-list button:focus-visible .filmed-thumb { box-shadow: 0 0 0 2px rgba(255,255,255,.35); }
+.travel-stage .filmed-list button[aria-pressed="true"] .filmed-thumb { box-shadow: 0 0 0 2px var(--glow); }
+.travel-stage .filmed-name { color: #fff; }
+.travel-stage .filmed-list button[aria-pressed="true"] .filmed-name { color: var(--glow); }
+.travel-stage .filmed-meta { color: var(--mute); }
+.travel-stage .filmed-link { color: var(--glow); }
 
 /* contact */
 .form { width: 841px; max-width: calc(100% - 12vw); margin: 0 auto; }
@@ -280,6 +323,14 @@ footer.site a:hover svg { fill: #999; }
   .bio-text, .bio-img { grid-column: 1 / -1; padding: 0; }
   .bio-img { margin-top: 24px; max-width: 70%; }
   .globe-fig { margin-top: 40px; }
+  .travel-intro { padding: 40px 0 48px; }
+  .travel-intro .lede { font-size: 17px; }
+  .travel-stage { padding: 56px 0 64px; }
+  .stage-stats { gap: 22px; }
+  .stage-stats dd { font-size: 34px; }
+  .stage-stats dt { font-size: 11.5px; }
+  .travel-stage .globe-fig { margin-top: 28px; }
+  .travel-stage .filmed { margin-top: 48px; }
   .filmed { margin-top: 48px; max-width: none; width: auto; }
   .filmed .w-label { margin: 0 6vw; }
   .filmed-list { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; padding: 0 6vw 8px; scrollbar-width: none; }
