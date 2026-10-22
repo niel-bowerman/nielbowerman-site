@@ -207,7 +207,7 @@
     };
     img.src = src;
   }
-  load('images/hero-masks.png', tMasks, true);
+  load('images/hero-masks.png?v=202610221518', tMasks, true);
 
   // object-fit: cover, done by hand: which part of the video the canvas shows
   var scale = [1, 1], offset = [0, 0];
