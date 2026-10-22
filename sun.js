@@ -31,7 +31,7 @@
     'uniform vec2 uRes;                                      // canvas size in pixels',
     // weather mix, each 0..1 (all 0 = the real overcast day); uFlash = lightning brightness
     'uniform float uClear, uGolden, uRain, uStorm, uSnow, uMist, uFlash;',
-    'uniform vec2 uBolt;                                     // lightning: x position (frame uv) and a random seed',
+    'uniform vec4 uBolt;    // lightning: x, seed, where it ends (y), and whether it can strike the land (1) or stays in the sky (0)',
     'float luma(vec3 c){ return dot(c, vec3(0.299, 0.587, 0.114)); }',
     'float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
     'float vnoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);',
@@ -129,16 +129,17 @@
     // lightning: the clouds flare, the land is lit from above
     '  lit *= mix(vec3(1.0), vec3(0.80, 0.80, 0.92), uStorm * sky);                // bruised, blue-grey storm sky',
     // lightning: a forked bolt in the sky (behind the hills), the clouds round it lit from within
-    '  float bx = uBolt.x * uAspect, px = uv.x * uAspect, yb = uv.y;',
-    '  float dMain = abs(px - (bx + boltX(yb, uBolt.y)));',
-    '  float yFork = 0.10 + 0.08 * hash(vec2(uBolt.y, 1.0));',
+    '  float bx = uBolt.x * uAspect, px = uv.x * uAspect, yb = uv.y, yEnd = uBolt.z;',
+    '  float dMain = abs(px - (bx + boltX(yb, uBolt.y) - boltX(yEnd, uBolt.y) * yb / yEnd));   // wanders, but lands exactly on its target',
+    '  float yFork = yEnd * (0.30 + 0.25 * hash(vec2(uBolt.y, 1.0)));',
     '  float dFork = abs(px - (bx + boltX(yFork, uBolt.y) + (yb - yFork) * (0.55 * sign(hash(vec2(uBolt.y, 2.0)) - 0.5)) + (boltX(yb, uBolt.y + 3.3) - boltX(yFork, uBolt.y + 3.3)) * 0.8));',
-    '  float span = smoothstep(0.0, 0.02, yb) * (1.0 - smoothstep(0.27, 0.32, yb));',
-    '  float fork = step(yFork, yb) * (1.0 - smoothstep(yFork + 0.07, yFork + 0.14, yb));',
+    '  float span = smoothstep(0.0, 0.02, yb) * (1.0 - smoothstep(yEnd - 0.004, yEnd + 0.004, yb));',
+    '  float fork = step(yFork, yb) * (1.0 - smoothstep(yFork + 0.4 * (yEnd - yFork), yFork + 0.7 * (yEnd - yFork), yb));',
     '  float px1 = 1.0 / uRes.y;',
     '  float boltCore = smoothstep(1.8 * px1, 0.0, dMain) * span + 0.85 * smoothstep(1.4 * px1, 0.0, dFork) * span * fork;',
     '  float glowB = exp(-dMain / 0.012) * span * 0.6 + exp(-length(vec2(px - bx, (yb - 0.06) * 1.5)) / 0.20) * 0.65;   // the cloud it came from lights up',
-    '  lit += vec3(0.86, 0.84, 1.0) * (boltCore * 1.6 + glowB * clamp(1.4 * lum - 0.2, 0.2, 1.0)) * uFlash * sky;',
+    '  float impact = exp(-length(vec2(px - bx, (yb - yEnd) * 2.0)) / 0.035) * uBolt.w;      // where it strikes the ground',
+    '  lit += vec3(0.86, 0.84, 1.0) * (boltCore * 1.6 * (sky + uBolt.w * land) + glowB * clamp(1.4 * lum - 0.2, 0.2, 1.0) * sky + impact * 0.9) * uFlash;',
     '  lit *= 1.0 + uFlash * (0.10 + 0.12 * dist) * land;                              // a brief lift on the land',
     // snow: lies only where the ground can hold it (hold: smooth ground yes, craggy rock faces no), thicker
     // on the brighter, more open bits; the bare rock goes dark and cold, the lochs dark, the sky pale grey,
@@ -212,19 +213,28 @@
     if (e.target.closest && e.target.closest('a, button')) return;
     var others = WEATHERS.filter(function (w) { return w !== weather; });
     setWeather(others[Math.floor(Math.random() * others.length)]);
+    if (weather === 'storm') {                       // the storm arrives with a strike right where you clicked
+      var r = hero.getBoundingClientRect();
+      var vx = ((e.clientX - r.left) / r.width) * scale[0] + offset[0];
+      var vy = ((e.clientY - r.top) / r.height) * scale[1] + offset[1];
+      var now = performance.now();
+      bolt = [vx, Math.random() * 100, Math.max(0.06, Math.min(0.98, vy)), 1];
+      strike = true; flash = 1.1; flicker = now + 110; nextFlash = now + 3500;
+    }
   });
   // lightning: in a storm, a flash every few seconds, often with a second flicker
-  var flash = 0, nextFlash = 0, flicker = 0, bolt = [0.3, 1.0];
+  var flash = 0, nextFlash = 0, flicker = 0, bolt = [0.3, 1.0, 0.30, 0], strike = false;
   function lightning(now) {
     if (mix.storm > 0.6 && now > nextFlash) {
       flash = 0.8 + Math.random() * 0.4;
-      bolt = [offset[0] + scale[0] * (0.08 + Math.random() * 0.84), Math.random() * 100];   // somewhere new in the visible sky
+      bolt = [offset[0] + scale[0] * (0.08 + Math.random() * 0.84), Math.random() * 100, 0.30, 0];   // somewhere new in the sky, down to the horizon
+      strike = false;
       flicker = Math.random() < 0.6 ? now + 90 + Math.random() * 120 : 0;
       nextFlash = now + 2500 + Math.random() * 6000;
     }
     if (flicker && now > flicker) { flash = Math.max(flash, 0.6 + Math.random() * 0.3); flicker = 0; }
     flash *= Math.exp(-(now - (lightning.t || now)) / 70); lightning.t = now;   // fades in ~0.2s
-    return heldFlash !== null ? heldFlash : flash * mix.storm;
+    return heldFlash !== null ? heldFlash : flash * (strike ? 1 : mix.storm);
   }
   var heldFlash = null;                   // (testing only: see setWeather below)
 
@@ -246,7 +256,7 @@
     };
     img.src = src;
   }
-  load('images/hero-masks.png?v=202610221542', tMasks, true);
+  load('images/hero-masks.png?v=202610221554', tMasks, true);
 
   // object-fit: cover, done by hand: which part of the video the canvas shows
   var scale = [1, 1], offset = [0, 0];
@@ -284,7 +294,7 @@
       setWeather(w);
       if (instant) Object.keys(mix).forEach(function (k) { mix[k] = k === w ? 1 : 0; });
     };
-    window.holdFlash = function (v, x, seed) { heldFlash = v; if (x !== undefined) bolt = [x, seed || 1]; };
+    window.holdFlash = function (v, x, seed, yEnd, land) { heldFlash = v; if (x !== undefined) bolt = [x, seed || 1, yEnd || 0.30, land || 0]; };
     window.getWeather = function () { return { weather: weather, mix: JSON.parse(JSON.stringify(mix)) }; };
   }
 
@@ -313,7 +323,7 @@
       gl.uniform1f(u[UNIFORM[w]], mix[w]);
     });
     gl.uniform1f(u.uFlash, lightning(now));
-    gl.uniform2fv(u.uBolt, bolt);
+    gl.uniform4fv(u.uBolt, bolt);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     if (!shown && video.classList.contains('on')) { shown = true; canvas.classList.add('on'); }
   }
