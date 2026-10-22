@@ -11,6 +11,13 @@
   var bar = fig.querySelector('.globe-bar');
   var fill = fig.querySelector('.globe-bar-fill');
   var replayBtn = fig.querySelector('.globe-replay');
+  var pin = wrap.querySelector('.globe-pin');
+  // Where the site's videos were filmed: one button each under the globe (data-lng/lat/place/when).
+  var spots = Array.prototype.map.call(document.querySelectorAll('.filmed-list button'), function (b) {
+    return { el: b, lng: +b.getAttribute('data-lng'), lat: +b.getAttribute('data-lat'),
+             name: b.getAttribute('data-place'), when: b.getAttribute('data-when') };
+  });
+  var sel = null, fly = null;
   var ctx = canvas.getContext('2d');
   var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -206,8 +213,43 @@
     });
 
     if (!full) traveller(t);
+    else filming(t);
     ctx.beginPath(); path(sphere); ctx.strokeStyle = C.rim; ctx.lineWidth = 1; ctx.stroke();
   }
+
+  // Filming spots: small white pins; the chosen one pulses and carries a label.
+  function filming(t) {
+    var shown = false;
+    spots.forEach(function (s) {
+      var q = screen([s.lng, s.lat], 1);
+      if (!q.show) return;
+      if (s === sel) {
+        var ring = (t % 1400) / 1400;
+        ctx.beginPath(); ctx.arc(q.x, q.y, 6 + ring * 16, 0, 2 * Math.PI);
+        ctx.strokeStyle = 'rgba(255,255,255,' + (.7 * (1 - ring)) + ')'; ctx.lineWidth = 2; ctx.stroke();
+        pin.style.left = q.x + 'px'; pin.style.top = q.y + 'px'; shown = true;
+      }
+      ctx.beginPath(); ctx.arc(q.x, q.y, s === sel ? 6 : 4, 0, 2 * Math.PI);
+      ctx.fillStyle = s === sel ? '#fff' : 'rgba(255,255,255,.9)'; ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.stroke();
+    });
+    pin.classList.toggle('on', shown && !fly);
+  }
+
+  function select(s) {
+    if (s === sel) s = null;
+    sel = s;
+    spots.forEach(function (o) { o.el.setAttribute('aria-pressed', o === s ? 'true' : 'false'); });
+    if (!s) { fly = null; return; }
+    if (mode !== 'done') finish();
+    var r = wrap.getBoundingClientRect();
+    if (r.top < 0 || r.bottom > window.innerHeight)    // bring the globe into view if it's off screen
+      wrap.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'center' });
+    pin.innerHTML = '<strong>' + s.name + '</strong>' + s.when;
+    fly = { from: rot.slice(), d: ((-s.lng - rot[0]) % 360 + 540) % 360 - 180,
+            lat: -Math.max(-50, Math.min(55, s.lat)) * .85, t0: performance.now() };
+  }
+  spots.forEach(function (s) { s.el.addEventListener('click', function () { select(s); }); });
 
   // Photo look: for each pixel of the disc, find the point on the sphere under it, undo the globe's
   // rotation and sample the Blue Marble image there, darkening towards the edge for a little depth.
@@ -270,6 +312,7 @@
   }
 
   function play(from) {
+    if (sel) select(sel);                              // a replay clears any chosen filming spot
     mode = 'play'; pt = from;
     fig.classList.remove('done');
   }
@@ -282,7 +325,11 @@
       if (!scrubbing) pt += dt;
       if (pt >= T) finish();
       else if (!dragging) follow(1 - Math.exp(-dt / 280));
-    } else if (mode === 'done' && !still && !dragging && !hover) {
+    } else if (fly) {                                  // turn to a chosen filming spot
+      var k = Math.min(1, (t - fly.t0) / (still ? 1 : 1400)), e = d3.easeCubicInOut(Math.max(0, k));
+      rot[0] = fly.from[0] + fly.d * e; rot[1] = fly.from[1] + (fly.lat - fly.from[1]) * e;
+      if (k >= 1) fly = null;
+    } else if (mode === 'done' && !still && !dragging && !hover && !sel) {
       rot[0] += dt * .006;
     }
     if (mode !== 'idle') label();
@@ -351,6 +398,30 @@
   });
   canvas.addEventListener('pointerleave', function () { hover = null; hide(); });
   function hide() { tip.classList.remove('on'); }
+
+  // Clicking a filming pin on the globe picks it too.
+  canvas.addEventListener('click', function (e) {
+    if (mode !== 'done') return;
+    var b = canvas.getBoundingClientRect(), x = e.clientX - b.left, y = e.clientY - b.top, best = null, bd = 14;
+    spots.forEach(function (s) {
+      var q = screen([s.lng, s.lat], 1), d = Math.hypot(q.x - x, q.y - y);
+      if (q.show && d < bd) { best = s; bd = d; }
+    });
+    if (best) select(best);
+  });
+
+  // Thumbnails play their clip while hovered.
+  spots.forEach(function (s) {
+    var v = s.el.querySelector('video');
+    if (!v) return;
+    s.el.addEventListener('mouseenter', function () {
+      if (still) return;
+      if (!v.src) v.src = v.getAttribute('data-src');
+      var p = v.play(); if (p && p.catch) p.catch(function () {});
+      s.el.classList.add('playing');
+    });
+    s.el.addEventListener('mouseleave', function () { v.pause(); s.el.classList.remove('playing'); });
+  });
 
   window.addEventListener('resize', resize);
 })();

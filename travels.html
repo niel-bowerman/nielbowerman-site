@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500&amp;family=Poppins:wght@300;500&amp;display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=202610230400">
+<link rel="stylesheet" href="style.css?v=202610230500">
 </head>
 <body>
 <header class="site">
@@ -43,18 +43,49 @@
 </section>
 <section class="sec-text sec-travel"><div class="narrow">
   <p>My wife Lily and I are now settled in London, but in 2019 and 2020 we were <a href="https://en.wikipedia.org/wiki/Digital_nomad">digital nomads</a> travelling the world while we waited for a UK visa for Lily.&nbsp; Our adventures during that time are captured in <a href="https://drive.google.com/file/d/1aysXN50JNO8rW7skzayU9JlvWUQd6RAm/view?usp=sharing">this 2-min video montage</a> and charted below courtesy of <a href="https://nomadlist.com/">NomadList</a>.&nbsp;</p>
-  <p>We published <a href="https://thebolditalic.com/photo-essay-san-francisco-during-coronavirus-89d6fbb45a5b">a photo essay on San Francisco</a> while we were ‘sheltering in place’ there during coronavirus.&nbsp; The video above is a time lapse of <a href="https://www.instagram.com/p/BuDLCFyg50S/">Shibuya Crossing</a> in Tokyo.&nbsp; More of my photos and videos are available on <a href="https://www.instagram.com/nielbowerman/">Instagram</a>.</p>
+  <p>We published <a href="https://thebolditalic.com/photo-essay-san-francisco-during-coronavirus-89d6fbb45a5b">a photo essay on San Francisco</a> while we were ‘sheltering in place’ there during coronavirus.&nbsp; More of my photos and videos are available on <a href="https://www.instagram.com/nielbowerman/">Instagram</a>.</p>
 </div>
 <figure class="globe-fig">
   <div class="globe">
     <canvas role="img" aria-label="Spinning globe of our 2018–2020 travels, from NomadList"></canvas>
     <div class="globe-tip" aria-hidden="true"></div>
+    <div class="globe-pin" aria-hidden="true"></div>
     <img class="globe-fallback" src="images/travels-map.jpg" alt="Map of our 2019–2020 travels, courtesy of NomadList" loading="lazy">
   </div>
   <p class="globe-now" aria-hidden="true"></p>
   <div class="globe-bar" role="slider" tabindex="0" aria-label="Journey timeline" aria-valuemin="0" aria-valuemax="100"><div class="globe-bar-fill"></div></div>
   <figcaption><span class="globe-stats"></span><span class="globe-hint">Drag to spin · data from <a href="https://nomads.com/@nielbowerman">NomadList</a></span><button class="globe-replay" type="button">↻ Replay the journey</button></figcaption>
 </figure>
+<div class="filmed">
+  <h2 class="w-label">Where the videos on this site were filmed</h2>
+  <ul class="filmed-list">
+    <li><button type="button" aria-pressed="false" data-lng="-6.272" data-lat="57.627" data-place="The Quiraing, Isle of Skye" data-when="Oct 2020">
+      <span class="filmed-thumb"><img src="images/filmed/home.jpg?v=202610230500" alt="" loading="lazy"><video muted loop playsinline preload="none" data-src="video/home.mp4?v=202610221608"></video></span>
+      <span class="filmed-name">The Quiraing, Isle of Skye</span>
+      <span class="filmed-meta">Oct 2020 · Home banner</span>
+    </button></li>
+    <li><button type="button" aria-pressed="false" data-lng="-73.942" data-lat="4.547" data-place="The Andes near Bogotá, Colombia" data-when="Aug 2019">
+      <span class="filmed-thumb"><img src="images/filmed/writing.jpg?v=202610230500" alt="" loading="lazy"><video muted loop playsinline preload="none" data-src="video/writing-sd.mp4?v=202610230430"></video></span>
+      <span class="filmed-name">The Andes near Bogotá, Colombia</span>
+      <span class="filmed-meta">Aug 2019 · Writing banner</span>
+    </button></li>
+    <li><button type="button" aria-pressed="false" data-lng="116.054" data-lat="-8.356" data-place="Gili Islands, Indonesia" data-when="Sep 2015">
+      <span class="filmed-thumb"><img src="images/filmed/talks.jpg?v=202610230500" alt="" loading="lazy"><video muted loop playsinline preload="none" data-src="video/talks-sd.mp4?v=202610230000"></video></span>
+      <span class="filmed-name">Gili Islands, Indonesia</span>
+      <span class="filmed-meta">Sep 2015 · Talks banner</span>
+    </button></li>
+    <li><button type="button" aria-pressed="false" data-lng="139.7005" data-lat="35.6595" data-place="Shibuya Crossing, Tokyo" data-when="Feb 2019">
+      <span class="filmed-thumb"><img src="images/filmed/travels.jpg?v=202610230500" alt="" loading="lazy"><video muted loop playsinline preload="none" data-src="video/travels-sd.mp4?v=202610230000"></video></span>
+      <span class="filmed-name">Shibuya Crossing, Tokyo</span>
+      <span class="filmed-meta">Feb 2019 · Travels banner</span>
+    </button></li>
+    <li><button type="button" aria-pressed="false" data-lng="-0.098" data-lat="51.508" data-place="The Thames, London" data-when="Mar 2019">
+      <span class="filmed-thumb"><img src="images/filmed/contact.jpg?v=202610230500" alt="" loading="lazy"><video muted loop playsinline preload="none" data-src="video/contact-sd.mp4?v=202610230000"></video></span>
+      <span class="filmed-name">The Thames, London</span>
+      <span class="filmed-meta">Mar 2019 · Contact banner</span>
+    </button></li>
+  </ul>
+</div>
 </section>
 </main>
 
@@ -69,6 +100,6 @@
 <script src="script.js?v=202610230000"></script>
 <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
-<script src="globe.js?v=202610222100"></script>
+<script src="globe.js?v=202610230500"></script>
 </body>
 </html>
