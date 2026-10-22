@@ -168,8 +168,8 @@ header.site {
 .globe-pin strong { display: block; font-weight: 500; color: #333; }
 
 /* travels: where the site's videos were filmed */
-.filmed { width: 960px; max-width: calc(100% - 12vw); margin: 64px auto 0; }
-.filmed-list { list-style: none; margin: 20px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+.filmed { width: 760px; max-width: calc(100% - 12vw); margin: 64px auto 0; }
+.filmed-list { list-style: none; margin: 20px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
 .filmed-list button {
   display: block; width: 100%; padding: 0; border: 0; background: none; text-align: left; cursor: pointer;
   font: inherit; color: inherit;
@@ -181,9 +181,9 @@ header.site {
 .filmed-list button:hover .filmed-thumb, .filmed-list button:focus-visible .filmed-thumb { box-shadow: 0 0 0 2px #cfd8da; }
 .filmed-list button[aria-pressed="true"] .filmed-thumb { box-shadow: 0 0 0 2px var(--link); }
 .filmed-list button:focus-visible { outline: none; }
-.filmed-name { display: block; margin-top: 10px; font: 500 14px/1.35 var(--body); color: #333; }
+.filmed-name { display: block; margin-top: 8px; font: 500 13px/1.35 var(--body); color: #333; }
 .filmed-list button[aria-pressed="true"] .filmed-name { color: var(--link); }
-.filmed-meta { display: block; margin-top: 2px; font-size: 12px; line-height: 1.4; color: var(--title); }
+.filmed-meta { display: block; margin-top: 2px; font-size: 11.5px; line-height: 1.4; color: var(--title); }
 .globe-tip strong { display: block; font-weight: 500; color: #333; }
 .globe-now { margin: 18px 0 0; min-height: 22px; font-size: 15px; line-height: 22px; color: var(--head); font-variant-numeric: tabular-nums; }
 .globe-bar { position: relative; height: 3px; margin: 14px auto 0; width: 80%; background: #e4e8e9; border-radius: 2px; cursor: pointer; touch-action: none; }
