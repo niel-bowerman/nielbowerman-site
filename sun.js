@@ -1,6 +1,8 @@
 // Homepage hero: a sun behind the clouds that follows the mouse while it's over the sky, and
 // relights the landscape to match. Drawn with WebGL over the hero video, using two maps made from
-// the still landscape: images/hero-masks.png (R = sky, G = lochs, B = distance, A = can hold snow). The land itself is never
+// the still landscape: images/hero-masks.png (R = sky, G = lochs, B = distance) and images/hero-snow.png
+// (where snow can settle). (Not packed into the masks' alpha: browsers drop the colour of fully transparent
+// pixels, which erased the sky.) The land itself is never
 // shaded: light shows only in the sky and as reflections on the lochs. Clicking the hero changes the
 // weather. Without WebGL, or with reduced motion, the plain video stays.
 (function () {
@@ -25,7 +27,7 @@
   var fs = [
     'precision highp float;',
     'varying vec2 vUv;',
-    'uniform sampler2D uVideo, uMasks;',
+    'uniform sampler2D uVideo, uMasks, uSnowHold;',
     'uniform vec2 uScale, uOffset, uSun;',
     'uniform float uAspect, uTime;',
     'uniform vec2 uRes;                                      // canvas size in pixels',
@@ -69,9 +71,8 @@
     'void main(){',
     '  vec2 uv = vUv * uScale + uOffset;',
     '  vec3 col = texture2D(uVideo, uv).rgb;',
-    '  vec4 mm = texture2D(uMasks, uv);',
-    '  vec3 m = mm.rgb;',
-    '  float hold = mm.a;                                    // can this spot hold snow?',
+    '  vec3 m = texture2D(uMasks, uv).rgb;',
+    '  float hold = texture2D(uSnowHold, uv).r;              // can this spot hold snow?',
     '  float sky = m.r, water = m.g, dist = m.b;',
     '  vec3 sunCol = vec3(1.0, 0.92, 0.78);',
     '  vec2 d = (uv - uSun) * vec2(uAspect, 1.0);          // offset from the sun, in frame heights',
@@ -196,7 +197,7 @@
     gl.uniform1i(gl.getUniformLocation(prog, name), unit);
     return t;
   }
-  var tVideo = texture(0, 'uVideo'), tMasks = texture(1, 'uMasks');
+  var tVideo = texture(0, 'uVideo'), tMasks = texture(1, 'uMasks'), tSnow = texture(2, 'uSnowHold');
   gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
   gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);   // masks are data, not a picture
   var u = {};
@@ -244,9 +245,9 @@
   function load(src, tex, keepSky) {
     var img = new Image();
     img.onload = function () {
-      gl.activeTexture(gl.TEXTURE1);
+      gl.activeTexture(tex === tMasks ? gl.TEXTURE1 : gl.TEXTURE2);
       gl.bindTexture(gl.TEXTURE_2D, tex);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);   // A = can hold snow
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
       if (keepSky) {
         var c = document.createElement('canvas'); c.width = SKY_W; c.height = SKY_H;
         var x = c.getContext('2d'); x.drawImage(img, 0, 0, SKY_W, SKY_H);
@@ -256,7 +257,8 @@
     };
     img.src = src;
   }
-  load('images/hero-masks.png?v=202610221554', tMasks, true);
+  load('images/hero-masks.png?v=202610221608', tMasks, true);
+  load('images/hero-snow.png?v=202610221608', tSnow, false);
 
   // object-fit: cover, done by hand: which part of the video the canvas shows
   var scale = [1, 1], offset = [0, 0];
@@ -308,7 +310,7 @@
   function frame(now) {
     requestAnimationFrame(frame);
     var dt = Math.min(0.25, (now - last) / 1000); last = now;   // easing by time, not frames
-    if (!visible || loaded < 1 || video.readyState < 2) return;
+    if (!visible || loaded < 2 || video.readyState < 2) return;
     var ks = 1 - Math.exp(-dt / 0.28), kw = 1 - Math.exp(-dt / 0.75);
     sun[0] += (target[0] - sun[0]) * ks;                              // the sun eases after the mouse
     sun[1] += (target[1] - sun[1]) * ks;
