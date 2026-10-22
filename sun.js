@@ -16,7 +16,7 @@
   if (!gl) return;
 
   var VIDEO_ASPECT = 16 / 9;
-  var DEFAULT_SUN = [0.30, 0.21];         // where the sun sits until the mouse moves over the sky (clear of the header)
+  var DEFAULT_SUN = [0.30, 0.21];         // resting spot: 30% across the visible frame, clear of the header
 
   var vs = 'attribute vec2 p; varying vec2 vUv;' +
     'void main(){ vUv = vec2(p.x * 0.5 + 0.5, 0.5 - p.y * 0.5); gl_Position = vec4(p, 0.0, 1.0); }';
@@ -139,7 +139,11 @@
   window.addEventListener('resize', resize);
   resize();
 
-  var sun = DEFAULT_SUN.slice(), target = DEFAULT_SUN.slice();
+  // the resting spot, within whatever part of the frame is actually showing (phones crop the sides)
+  var moved = false;
+  function rest() { return [offset[0] + scale[0] * DEFAULT_SUN[0], DEFAULT_SUN[1]]; }
+  var sun = rest(), target = rest();
+  window.addEventListener('resize', function () { if (!moved) { sun = rest(); target = rest(); } });
   hero.addEventListener('pointermove', function (e) {
     if (!skyData) return;
     var r = hero.getBoundingClientRect();
@@ -147,7 +151,7 @@
     var vy = ((e.clientY - r.top) / r.height) * scale[1] + offset[1];
     var sx = Math.max(0, Math.min(SKY_W - 1, Math.floor(vx * SKY_W)));
     var sy = Math.max(0, Math.min(SKY_H - 1, Math.floor(vy * SKY_H)));
-    if (skyData[(sy * SKY_W + sx) * 4] > 140) target = [vx, vy];   // only while over the sky
+    if (skyData[(sy * SKY_W + sx) * 4] > 140) { target = [vx, vy]; moved = true; }   // only while over the sky
   });
 
   if (debug) window.setSun = function (x, y) { sun = [x, y]; target = [x, y]; };
