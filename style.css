@@ -58,7 +58,7 @@ header.site {
 }
 /* inner pages: a plain centred title (Travels keeps a photo/video banner) */
 .page-head { padding: calc(var(--header-h) + 56px) 0 8px; }
-.page-head h1 { width: 841px; max-width: 88%; margin: 0 auto; }
+.page-head h1 { width: 841px; max-width: 88%; margin: 0 auto; color: #222; }
 /* banner (Travels) */
 .page-hero { height: 46vh; min-height: 340px; max-height: 520px; }
 .page-hero::after { background: linear-gradient(rgba(0,0,0,.18), rgba(0,0,0,.32)); }
